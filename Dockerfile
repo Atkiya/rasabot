@@ -13,7 +13,5 @@ USER 1001
 
 EXPOSE 5005
 
-# Pre-warm: load model during build so runtime startup is faster
-RUN rasa run --enable-api --dry-run 2>/dev/null || true
-
-CMD bash -lc "rasa run --enable-api --cors '*' --port ${PORT:-5005}"
+# Fixed CMD - no bash wrapper needed
+CMD ["run", "--enable-api", "--cors", "*", "--port", "10000"]
