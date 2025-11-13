@@ -8,13 +8,14 @@ COPY domain.yml config.yml endpoints.yml credentials.yml /app/
 COPY data /app/data
 COPY actions /app/actions
 
-# Train model during build (fixes empty response issue)
-RUN rasa train --fixed-model-name model
+# Copy pretrained model
+COPY models /app/models
 
+# Set proper permissions
 RUN chown -R 1001:1001 /app
 USER 1001
 
 EXPOSE 10000
 
-# Start Rasa with the trained model
-CMD ["run", "--enable-api", "--cors", "*", "--port", "10000"]
+# Start Rasa with the pretrained model
+CMD ["run", "--model", "models", "--enable-api", "--cors", "*", "--port", "10000"]
