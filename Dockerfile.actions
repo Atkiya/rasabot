@@ -1,0 +1,28 @@
+FROM rasa/rasa-sdk:3.6.0
+
+# Set working directory
+WORKDIR /app
+
+# Switch to root
+USER root
+
+# Install requests (needed for your GitHub data fetching)
+RUN pip install requests
+
+# Copy actions directory
+COPY actions /app/actions
+
+# Copy any JSON data files if local
+# COPY *.json /app/ 
+
+# Set permissions
+RUN chown -R 1001:1001 /app
+
+# Switch back to non-root
+USER 1001
+
+# Expose action server port
+EXPOSE 5055
+
+# Start action server
+CMD ["start", "--actions", "actions"]
