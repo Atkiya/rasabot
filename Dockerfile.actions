@@ -1,17 +1,15 @@
 FROM rasa/rasa-sdk:3.6.0
 
 WORKDIR /app
-
 USER root
 
-# Install only requests (needed for your GitHub data fetching)
+# Install requests for GitHub API calls
 RUN pip install --no-cache-dir requests
 
 # Copy actions
 COPY actions /app/actions
 
 RUN chown -R 1001:1001 /app
-
 USER 1001
 
 EXPOSE 5055
