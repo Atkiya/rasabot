@@ -1,10 +1,7 @@
+requirements.txt
 __pycache__
 *.pyc
-*.pyo
 .git
 .gitignore
-.vscode
-.idea
 *.md
 tests/
-.pytest_cache
