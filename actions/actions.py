@@ -1,6808 +1,2680 @@
-from rasa_sdk import Action, Tracker
-from rasa_sdk.executor import CollectingDispatcher
-from typing import Any, Text, Dict, List
-import json
-import requests
-from rasa_sdk.events import UserUtteranceReverted
-from rasa_sdk.events import SlotSet
-
-
-
-
-
-# ========================================
-# HELPER FUNCTIONS TO LOAD ALL DATA
-# ========================================
-
-BASE_URL = "https://raw.githubusercontent.com/Atkiya/RasaChatbot/main/"
-
-def load_json_file(filename):
-    try:
-        url = BASE_URL + filename
-        response = requests.get(url)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            print(f"ERROR: Failed to fetch {filename}. Status: {response.status_code}")
-            return None
-    except Exception as e:
-        print(f"ERROR loading {filename}: {str(e)}")
-        return None
-
-def load_admission_calendar():
-    return load_json_file("dynamic_admission_calendar.json")
-
-def load_admission_process():
-    return load_json_file("dynamic_admission_process.json")
-
-def load_admission_requirements():
-    return load_json_file("dynamic_admission_requirements.json")
-
-def load_tuition_fees():
-    return load_json_file("dynamic_tution_fees.json")
-
-def load_events_workshops():
-    return load_json_file("dynamic_events_workshops.json")
-
-def load_faculty():
-    return load_json_file("dynamic_faculty.json")
-
-def load_grading():
-    return load_json_file("dynamic_grading.json")
-
-def load_facilities():
-    return load_json_file("dynamic_facilites.json")
-
-# ========================================
-# STATIC FILES
-# ========================================
-def load_about_ewu():
-    return load_json_file("static_aboutEWU.json")
-
-def load_admin():
-    return load_json_file("static_Admin.json")
-
-def load_all_programs():
-    return load_json_file("static_AllAvailablePrograms.json")
-
-def load_campus_life():
-    return load_json_file("static_campus_life.json")
-
-def load_career_counseling():
-    return load_json_file("static_Career_Counseling_Center.json")
-
-def load_clubs():
-    return load_json_file("static_clubs.json")
-
-def load_departments():
-    return load_json_file("static_depts.json")
-
-def load_facilities_static():
-    return load_json_file("static_facilities.json")
-
-def load_facilities17():
-    return load_json_file("static_facilities17.json")
-
-def load_helpdesk():
-    return load_json_file("static_helpdesk.json")
-
-def load_payment_procedure():
-    return load_json_file("static_payment_procedure.json")
-
-def load_policy():
-    return load_json_file("static_Policy.json")
-
-def load_programs():
-    return load_json_file("static_Programs.json")
-
-def load_rules():
-    return load_json_file("static_Rules.json")
-
-def load_scholarships():
-    return load_json_file("static_scholarship_and_financial.json")
-
-def load_sexual_harassment():
-    return load_json_file("static_Sexual_harassment.json")
-
-def load_tuition_fees_static():
-    return load_json_file("static_Tuition_fees.json")
-
-# ========================================
-# GRADUATE PROGRAMS
-# ========================================
-def load_ma_english():
-    return load_json_file("ma_english.json")
-
-def load_mba_emba():
-    return load_json_file("mba_emba.json")
-
-def load_mds():
-    return load_json_file("mds.json")
-
-def load_mphil_pharmacy():
-    return load_json_file("mphil_pharmacy.json")
-
-def load_mss_economics():
-    return load_json_file("mss_eco.json")
-
-def load_ms_cse():
-    return load_json_file("ms_cse.json")
-
-def load_ms_dsa():
-    return load_json_file("ms_dsa.json")
-
-def load_tesol():
-    return load_json_file("tesol.json")
-
-# ========================================
-# UNDERGRADUATE PROGRAMS
-# ========================================
-def load_st_ba():
-    return load_json_file("st_ba.json")
-
-def load_st_ce():
-    return load_json_file("st_ce.json")
-
-def load_st_cse():
-    return load_json_file("st_cse.json")
-
-def load_st_ece():
-    return load_json_file("st_ece.json")
-
-def load_st_economics():
-    return load_json_file("st_economics.json")
-
-def load_st_eee():
-    return load_json_file("st_eee.json")
-
-def load_st_english():
-    return load_json_file("st_english.json")
-
-def load_st_geb():
-    return load_json_file("st_geb.json")
-
-def load_st_information_studies():
-    return load_json_file("st_information_studies.json")
-
-def load_st_law():
-    return load_json_file("st_law.json")
-
-def load_st_math():
-    return load_json_file("st_math.json")
-
-def load_st_pharmacy():
-    return load_json_file("st_pharmacy.json")
-
-def load_st_social_relations():
-    return load_json_file("st_social_relations.json")
-
-def load_st_sociology():
-    return load_json_file("st_sociology.json")
-
-# ========================================
-# HELPER FUNCTION TO LOAD ALL FILES
-# ========================================
-def load_all_knowledge_base():
-    """Load all JSON files at once into a dictionary"""
-    return {
-        # Dynamic files
-        "admission_calendar": load_admission_calendar(),
-        "admission_process": load_admission_process(),
-        "admission_requirements": load_admission_requirements(),
-        "tuition_fees": load_tuition_fees(),
-        "events_workshops": load_events_workshops(),
-        "faculty": load_faculty(),
-        "grading": load_grading(),
-        "facilities": load_facilities(),
-        
-        # Static files
-        "about_ewu": load_about_ewu(),
-        "admin": load_admin(),
-        "all_programs": load_all_programs(),
-        "campus_life": load_campus_life(),
-        "career_counseling": load_career_counseling(),
-        "clubs": load_clubs(),
-        "departments": load_departments(),
-        "facilities_static": load_facilities_static(),
-        "facilities17": load_facilities17(),
-        "helpdesk": load_helpdesk(),
-        "payment_procedure": load_payment_procedure(),
-        "policy": load_policy(),
-        "programs": load_programs(),
-        "rules": load_rules(),
-        "scholarships": load_scholarships(),
-        "sexual_harassment": load_sexual_harassment(),
-        "tuition_fees_static": load_tuition_fees_static(),
-        
-        # Graduate programs
-        "ma_english": load_ma_english(),
-        "mba_emba": load_mba_emba(),
-        "mds": load_mds(),
-        "mphil_pharmacy": load_mphil_pharmacy(),
-        "mss_economics": load_mss_economics(),
-        "ms_cse": load_ms_cse(),
-        "ms_dsa": load_ms_dsa(),
-        "tesol": load_tesol(),
-        
-        # Undergraduate programs
-        "st_ba": load_st_ba(),
-        "st_ce": load_st_ce(),
-        "st_cse": load_st_cse(),
-        "st_ece": load_st_ece(),
-        "st_economics": load_st_economics(),
-        "st_eee": load_st_eee(),
-        "st_english": load_st_english(),
-        "st_geb": load_st_geb(),
-        "st_information_studies": load_st_information_studies(),
-        "st_law": load_st_law(),
-        "st_math": load_st_math(),
-        "st_pharmacy": load_st_pharmacy(),
-        "st_social_relations": load_st_social_relations(),
-        "st_sociology": load_st_sociology(),
-    }
-
-
-# ========================================
-# TUITION FEES (UNDERGRADUATE) ACTIONS
-# ========================================
-
-class ActionGetTuitionGeneral(Action):
-    def name(self) -> Text:
-        return "action_tuition_general"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            dispatcher.utter_message(text="Sorry, I couldn't retrieve tuition information at this time.")
-            return []
-        
-        message = "**East West University Tuition Fees (Per Credit)**\n\n"
-        for program in data['undergraduate_programs']['tuition_fees_per_credit']:
-            message += f"- {program['program']}: {program['fee_per_credit']:,} BDT/credit\n"
-        
-        message += f"\n*Applicable from: {data['page_info']['applicable_from']}*"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetApplicationFee(Action):
-    def name(self) -> Text:
-        return "action_application_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            dispatcher.utter_message(text="Sorry, I couldn't retrieve fee information at this time.")
-            return []
-        
-        app_fee = data['fee_categories']['application_fee']
-        message = f"The application fee at East West University is **{app_fee}** (online processing fee, non-refundable)."
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionCSE(Action):
-    def name(self) -> Text:
-        return "action_tuition_cse"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'CSE' in p['program']), None)
-        if prog:
-            message = (f"**B.Sc. in Computer Science & Engineering (CSE)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-        else:
-            message = "CSE tuition information not available."
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionBBA(Action):
-    def name(self) -> Text:
-        return "action_tuition_bba"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if p['program'] == 'BBA'), None)
-        if prog:
-            message = (f"**BBA (Bachelor of Business Administration)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-        else:
-            message = "BBA tuition information not available."
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionEconomics(Action):
-    def name(self) -> Text:
-        return "action_tuition_economics"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'Economics' in p['program']), None)
-        if prog:
-            message = (f"**BSS in Economics**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionEnglish(Action):
-    def name(self) -> Text:
-        return "action_tuition_english"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'English' in p['program']), None)
-        if prog:
-            message = (f"**BA in English**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionLaw(Action):
-    def name(self) -> Text:
-        return "action_tuition_law"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'LL.B' in p['program']), None)
-        if prog:
-            message = (f"**LL.B (Honours)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionSociology(Action):
-    def name(self) -> Text:
-        return "action_tuition_sociology"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'Sociology' in p['program']), None)
-        if prog:
-            message = (f"**BSS in Sociology**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionInformationStudies(Action):
-    def name(self) -> Text:
-        return "action_tuition_information_studies"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'Information Studies' in p['program']), None)
-        if prog:
-            message = (f"**BSS in Information Studies**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionICE(Action):
-    def name(self) -> Text:
-        return "action_tuition_ice"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'ICE' in p['program'] or 'Communication' in p['program']), None)
-        if prog:
-            message = (f"**B.Sc. in Information & Communication Engineering (ICE)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionEEE(Action):
-    def name(self) -> Text:
-        return "action_tuition_eee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'EEE' in p['program']), None)
-        if prog:
-            message = (f"**B.Sc. in Electrical & Electronic Engineering (EEE)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionPharmacy(Action):
-    def name(self) -> Text:
-        return "action_tuition_pharmacy"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'Pharm' in p['program']), None)
-        if prog:
-            message = (f"**Bachelor of Pharmacy (B.Pharm)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionGEB(Action):
-    def name(self) -> Text:
-        return "action_tuition_geb"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'GEB' in p['program'] or 'Genetic' in p['program']), None)
-        if prog:
-            message = (f"**B.Sc. in Genetic Engineering & Biotechnology (GEB)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionCivil(Action):
-    def name(self) -> Text:
-        return "action_tuition_civil"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'Civil' in p['program']), None)
-        if prog:
-            message = (f"**B.Sc. in Civil Engineering**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionPPHS(Action):
-    def name(self) -> Text:
-        return "action_tuition_pphs"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'PPHS' in p['program'] or 'Public Health' in p['program']), None)
-        if prog:
-            message = (f"**BSS in Population & Public Health Sciences (PPHS)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionMath(Action):
-    def name(self) -> Text:
-        return "action_tuition_math"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'Mathematics' in p['program']), None)
-        if prog:
-            message = (f"**B.Sc. in Mathematics**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionDataScience(Action):
-    def name(self) -> Text:
-        return "action_tuition_data_science"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'Data Science' in p['program']), None)
-        if prog:
-            message = (f"**B.Sc. in Data Science & Analytics**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionSocialRelations(Action):
-    def name(self) -> Text:
-        return "action_tuition_social_relations"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'Social Relations' in p['program']), None)
-        if prog:
-            message = (f"**BSS in Social Relations**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-    
-# ========================================
-# MISSING TUITION FEES (GRADUATE) ACTIONS
-# ========================================
-
-class ActionMSDataScienceFee(Action):
-    def name(self) -> Text:
-        return "action_ms_data_science_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        prog = next((p for p in data['graduate_programs']['detailed_fee_structure']
-                    if 'Data Science' in p['program'] and 'Analytics' in p['program']), None)
-        if prog:
-            message = (f"**M.S. in Data Science and Analytics**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-# ========================================
-# MISSING GRADUATE PROGRAM ACTIONS
-# ========================================
-
-class ActionMAEnglishExtendedFee(Action):
-    def name(self) -> Text:
-        return "action_ma_english_extended_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        prog = next((p for p in data['graduate_programs']['detailed_fee_structure']
-                    if p['program'] == 'MA in English (Extended)'), None)
-        if prog:
-            message = (f"**MA in English (Extended - 45 Credits)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionMATESOL42Fee(Action):
-    def name(self) -> Text:
-        return "action_ma_tesol_42_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        prog = next((p for p in data['graduate_programs']['detailed_fee_structure']
-                    if p['program'] == 'MA in TESOL' and p['credits'] == 42), None)
-        if prog:
-            message = (f"**MA in TESOL (42 Credits)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionMATESOL48Fee(Action):
-    def name(self) -> Text:
-        return "action_ma_tesol_48_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        prog = next((p for p in data['graduate_programs']['detailed_fee_structure']
-                    if p['program'] == 'MA in TESOL' and p['credits'] == 48), None)
-        if prog:
-            message = (f"**MA in TESOL (48 Credits)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionMATESOL40Fee(Action):
-    def name(self) -> Text:
-        return "action_ma_tesol_40_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        prog = next((p for p in data['graduate_programs']['detailed_fee_structure']
-                    if p['program'] == 'MA in TESOL' and p['credits'] == 40), None)
-        if prog:
-            message = (f"**MA in TESOL (40 Credits)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionMAEnglishExtendedFee(Action):
-    def name(self) -> Text:
-        return "action_ma_english_extended_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        prog = next((p for p in data['graduate_programs']['detailed_fee_structure']
-                    if p['program'] == 'MA in English (Extended)'), None)
-        if prog:
-            message = (f"**MA in English (Extended - 45 Credits)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionMATESOL40Fee(Action):
-    def name(self) -> Text:
-        return "action_ma_tesol_40_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        prog = next((p for p in data['graduate_programs']['detailed_fee_structure']
-                    if p['program'] == 'MA in TESOL' and p['credits'] == 40), None)
-        if prog:
-            message = (f"**MA in TESOL (40 Credits)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionMATESOL42Fee(Action):
-    def name(self) -> Text:
-        return "action_ma_tesol_42_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        prog = next((p for p in data['graduate_programs']['detailed_fee_structure']
-                    if p['program'] == 'MA in TESOL' and p['credits'] == 42), None)
-        if prog:
-            message = (f"**MA in TESOL (42 Credits)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionMATESOL48Fee(Action):
-    def name(self) -> Text:
-        return "action_ma_tesol_48_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        prog = next((p for p in data['graduate_programs']['detailed_fee_structure']
-                    if p['program'] == 'MA in TESOL' and p['credits'] == 48), None)
-        if prog:
-            message = (f"**MA in TESOL (48 Credits)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-# ========================================
-# DIPLOMA PROGRAMS ACTIONS
-# ========================================
-
-class ActionPPDMDiplomaFee(Action):
-    def name(self) -> Text:
-        return "action_ppdm_diploma_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        prog = next((p for p in data['diploma_programs']['detailed_fee_structure']
-                    if 'PPDM' in p['program'] or 'Disaster Management' in p['program']), None)
-        if prog:
-            message = (f"**{prog['program']}**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-# ========================================
-# COMPREHENSIVE TUITION BREAKDOWN (ALL PROGRAMS)
-# ========================================
-
-class ActionCompleteTuitionStructure(Action):
-    def name(self) -> Text:
-        return "action_complete_tuition_structure"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        message = "**Complete Tuition Fee Structure at EWU**\n\n"
-        message += "**UNDERGRADUATE PROGRAMS** (15 programs)\n"
-        for prog in data['undergraduate_programs']['detailed_fee_structure']:
-            message += f"- {prog['program']}: {prog['grand_total']:,} BDT (Total)\n"
-        
-        message += "\n**GRADUATE PROGRAMS** (13 programs)\n"
-        for prog in data['graduate_programs']['detailed_fee_structure']:
-            message += f"- {prog['program']}: {prog['grand_total']:,} BDT (Total)\n"
-        
-        message += "\n**DIPLOMA PROGRAMS** (1 program)\n"
-        for prog in data['diploma_programs']['detailed_fee_structure']:
-            message += f"- {prog['program']}: {prog['grand_total']:,} BDT (Total)\n"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-# ========================================
-# TUITION FEES (GRADUATE) ACTIONS
-# ========================================
-
-class ActionMBAFee(Action):
-    def name(self) -> Text:
-        return "action_mba_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**MBA Program Fee**\n\nFor detailed MBA tuition information, please contact the admissions office at admissions@ewubd.edu or call 09666775577.")
-        return []
-
-class ActionEMBAFee(Action):
-    def name(self) -> Text:
-        return "action_emba_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**Executive MBA (EMBA) Program Fee**\n\nFor detailed EMBA tuition information, please contact the admissions office at admissions@ewubd.edu or call 09666775577.")
-        return []
-
-class ActionMDSFee(Action):
-    def name(self) -> Text:
-        return "action_mds_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**Master in Development Studies (MDS) Program Fee**\n\nFor detailed MDS tuition information, please contact admissions.")
-        return []
-
-class ActionMSSEconomicsFee(Action):
-    def name(self) -> Text:
-        return "action_mss_economics_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**MSS in Economics Program Fee**\n\nFor detailed MSS Economics tuition information, please contact admissions.")
-        return []
-
-class ActionMAEnglishFee(Action):
-    def name(self) -> Text:
-        return "action_ma_english_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**MA in English Program Fee**\n\nFor detailed MA English tuition information, please contact admissions.")
-        return []
-
-class ActionMATESOLFee(Action):
-    def name(self) -> Text:
-        return "action_ma_tesol_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**MA in TESOL Program Fee**\n\nFor detailed MA TESOL tuition information, please contact admissions.")
-        return []
-
-class ActionLLMFee(Action):
-    def name(self) -> Text:
-        return "action_llm_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**Master of Laws (LL.M.) Program Fee**\n\nFor detailed LL.M tuition information, please contact admissions.")
-        return []
-
-class ActionMPRHGDFee(Action):
-    def name(self) -> Text:
-        return "action_mprhgd_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**MPRHGD Program Fee**\n\nFor detailed MPRHGD tuition information, please contact admissions.")
-        return []
-
-class ActionDSAnalyticsFee(Action):
-    def name(self) -> Text:
-        return "action_ds_analytics_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**MS Data Science & Analytics Program Fee**\n\nFor detailed MS Data Science tuition information, please contact admissions.")
-        return []
-
-class ActionMSCSEFee(Action):
-    def name(self) -> Text:
-        return "action_ms_cse_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**MS in Computer Science & Engineering (MS CSE) Program Fee**\n\nFor detailed MS CSE tuition information, please contact admissions.")
-        return []
-
-class ActionMPharmFee(Action):
-    def name(self) -> Text:
-        return "action_mpharm_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**M.Pharm Program Fee**\n\nFor detailed M.Pharm tuition information, please contact admissions.")
-        return []
-
-class ActionPGDEDFee(Action):
-    def name(self) -> Text:
-        return "action_pgded_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**PGDED (Post Graduate Diploma in Entrepreneurship Development) Program Fee**\n\nFor detailed PGDED tuition information, please contact admissions.")
-        return []
-
-class ActionPPDMFee(Action):
-    def name(self) -> Text:
-        return "action_ppdm_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**PPDM (Post Graduate Diploma in Population, Public Health and Disaster Management) Program Fee**\n\nFor detailed PPDM tuition information, please contact admissions.")
-        return []
-
-# ========================================
-# ADMISSION DEADLINES
-# ========================================
-
-class ActionAdmissionDeadlineGeneral(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_general"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            dispatcher.utter_message(text="Sorry, admission information is currently unavailable.")
-            return []
-        
-        # Build header message
-        message = f"**{data['page_info']['semester']} Admission Deadlines**\n\n"
-        
-        # Undergraduate Programs Section
-        message += "** Undergraduate Programs:**\n"
-        for program in data['undergraduate_admission']:
-            prog_name = program['program']
-            deadline = program['application_deadline']
-            message += f"• {prog_name}: {deadline}\n"
-        
-        # Graduate Programs Section
-        message += "\n** Graduate Programs:**\n"
-        for program in dat['graduate_admission']:
-            prog_name = program['program']
-            deadline = program['application_deadline']
-            message += f"• {prog_name}: {deadline}\n"
-        
-        # Footer note
-        message += f"\n*{data['page_info']['disclaimer']}*"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-class ActionAdmissionDeadlineCSE(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_cse"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'CSE' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Application Deadline:** {prog['application_deadline']}\n📝 **Test Date:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineBBA(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_bba"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'BBA' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Application Deadline:** {prog['application_deadline']}\n📝 **Test Date:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineEconomics(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_economics"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'Economics' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineEnglish(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_english"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'English' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineLaw(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_law"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'LLB' in p['program'] or 'Law' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineSociology(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_sociology"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'Sociology' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineInformationStudies(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_information_studies"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'Information Studies' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlinePPHS(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_pphs"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'Public Health' in p['program'] or 'PPHS' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineICE(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_ice"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'ICE' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineEEE(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_eee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'EEE' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlinePharmacy(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_pharmacy"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'Pharmacy' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineGEB(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_geb"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'Genetic' in p['program'] or 'Biotechnology' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineCivil(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_civil"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'Civil' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineMath(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_math"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'Mathematics' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineDataScience(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_data_science"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'Data Science' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-# ========================================
-# ADMISSION DEADLINES (GRADUATE)
-# ========================================
-
-class ActionAdmissionDeadlineMBA(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_mba"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'MBA' in p['program'] and 'Executive' not in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineEMBA(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_emba"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'Executive MBA' in p['program'] or 'EMBA' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineMDS(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_mds"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'MDS' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineMSSEconomics(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_mss_economics"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'MSS' in p['program'] and 'Economics' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineMAEnglish(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_ma_english"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'MA in English' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineMATESOL(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_ma_tesol"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'TESOL' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineMPRHGD(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_mprhgd"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'MPRHGD' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineLLM(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_llm"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'LLM' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineMSCSE(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_ms_cse"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'MS in CSE' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineMSDataScience(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_ms_data_science"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'Data Science' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineMPharm(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_mpharm"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'Master of Pharmacy' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlinePPDM(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_ppdm"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'PPDM' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-# ========================================
-# ADMISSION TEST DATES
-# ========================================
-
-class ActionAdmissionTestDateGeneral(Action):
-    def name(self) -> Text:
-        return "action_admission_test_date_general"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        message = "**Admission Test Dates at EWU**\n\n"
-        message += "**Engineering/Science Programs:** Aug 30, 2025 at 2:30 PM\n"
-        message += "**Business/Arts Programs:** Aug 30, 2025 at 10:00 AM\n\n"
-        message += "*For specific program test dates, please ask about your desired program.*"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionTestDateCSE(Action):
-    def name(self) -> Text:
-        return "action_admission_test_date_cse"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'CSE' in p['program']), None)
-        if prog:
-            message = f"**Computer Science & Engineering (CSE) Admission Test**\n\n"
-            message += f" **Test:** {prog['admission_test']}\n"
-            message += f" **Apply by:** {prog['application_deadline']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionTestDateBBA(Action):
-    def name(self) -> Text:
-        return "action_admission_test_date_bba"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'BBA' in p['program']), None)
-        if prog:
-            message = f"**BBA Admission Test**\n\n"
-            message += f" **Test:** {prog['admission_test']}\n"
-            message += f" **Apply by:** {prog['application_deadline']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionTestDateMBA(Action):
-    def name(self) -> Text:
-        return "action_admission_test_date_mba"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'MBA' in p['program'] and 'Executive' not in p['program']), None)
-        if prog:
-            message = f"**MBA Admission Test**\n\n"
-            message += f" **Test:** {prog['admission_test']}\n"
-            message += f" **Apply by:** {prog['application_deadline']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-# ========================================
-# ADMISSION REQUIREMENTS ACTIONS
-# ========================================
-
-class ActionAdmissionRequirementsGeneral(Action):
-    def name(self) -> Text:
-        return "action_admission_requirements_general"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_requirements()
-        if not data:
-            dispatcher.utter_message(text="Sorry, admission requirements information is unavailable.")
-            return []
-        
-        ug = data['admission_requirements']['undergraduate']['general_programs_except_bpharm']
-        message = "**Undergraduate Admission Requirements at EWU**\n\n"
-        message += f" **SSC & HSC:** {ug['ssc_hsc']}\n"
-        message += f" **Diploma:** {ug['diploma']}\n"
-        message += f" **O/A Levels:** {ug['o_a_levels']['requirement']}\n\n"
-        message += "**Admission Test Weightage:**\n"
-        message += f"- Admission Test: {ug['admission_test']['weightage']['admission_test']}\n"
-        message += f"- SSC/O Level: {ug['admission_test']['weightage']['ssc_o_level']}\n"
-        message += f"- HSC/A Level: {ug['admission_test']['weightage']['hsc_a_level']}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionRequirementsCSE(Action):
-    def name(self) -> Text:
-        return "action_admission_requirements_cse"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_requirements()
-        if not data:
-            return []
-        
-        ug = data['admission_requirements']['undergraduate']['general_programs_except_bpharm']
-        cse_req = ug['subject_requirements']['cse']
-        message = "**B.Sc. in CSE Admission Requirements**\n\n"
-        message += f" **Academic:** {ug['ssc_hsc']}\n"
-        message += f" **Subject Requirements:** {cse_req}\n\n"
-        message += "**Test Weightage:**\n"
-        message += f"- Admission Test: {ug['admission_test']['weightage']['admission_test']}\n"
-        message += f"- SSC: {ug['admission_test']['weightage']['ssc_o_level']}\n"
-        message += f"- HSC: {ug['admission_test']['weightage']['hsc_a_level']}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionRequirementsPharmacy(Action):
-    def name(self) -> Text:
-        return "action_admission_requirements_pharmacy"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_requirements()
-        if not data:
-            return []
-        
-        pharm = data['admission_requirements']['undergraduate']['bpharm']
-        message = "**B.Pharm Admission Requirements**\n\n"
-        message += f"🇧🇩 **Citizenship:** {pharm['citizenship']}\n"
-        message += f" **GPA:** {pharm['ssc_hsc']['aggregate']}\n"
-        message += f" **Each Exam:** {pharm['ssc_hsc']['minimum_each']}\n\n"
-        message += "**Subject Requirements (Minimum GPA):**\n"
-        message += f"- Chemistry: {pharm['subject_gpa']['chemistry']}\n"
-        message += f"- Biology: {pharm['subject_gpa']['biology']}\n"
-        message += f"- Physics: {pharm['subject_gpa']['physics']}\n"
-        message += f"- Mathematics: {pharm['subject_gpa']['mathematics']}\n\n"
-        message += f" {pharm['special_note']}\n"
-        message += f" {pharm['year_of_pass']}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionRequirementsMBA(Action):
-    def name(self) -> Text:
-        return "action_admission_requirements_mba"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_requirements()
-        if not data:
-            return []
-        
-        mba = data['admission_requirements']['graduate']['mba_emba']
-        message = "**MBA Admission Requirements**\n\n"
-        message += f" **Degree:** {mba['degree']}\n"
-        message += f" *SSC & HSC:** {mba['ssc_hsc_gpa']}\n"
-        message += f"💼 **Work Experience:** {mba['mba']['work_experience']}\n\n"
-        message += "**Test Exemptions:**\n"
-        message += f"- EWU Graduates: {mba['test_exemptions']['ewu_graduates']}\n"
-        message += f"- Other Universities: {mba['test_exemptions']['other_universities']}"
-        dispatcher.utter_message(text=message)
-        return []
-
-# ============================================================================
-# MISSING ADMISSION PROCESS ACTION FUNCTIONS
-# ============================================================================
-
-class ActionAdmissionApplicationSteps(Action):
-    """Display all 11 application steps for admission"""
-    def name(self) -> Text:
-        return "action_admission_application_steps"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_process()
-        if not data:
-            dispatcher.utter_message(text="Sorry, I couldn't retrieve the application steps.")
-            return []
-        
-        app_section = data.get('admission_process', {}).get('application', {})
-        message = "** EWU Admission Application - 11 Steps**\n\n"
-        
-        # Website links
-        links = app_section.get('website_links', [])
-        message += "** Admission Websites:**\n"
-        for link in links:
-            message += f"- {link}\n"
-        
-        # Browser recommendations
-        browsers = app_section.get('browser_recommendation', [])
-        message += f"\n** Recommended Browsers:** {', '.join(browsers)}\n\n"
-        
-        # Application steps
-        steps = app_section.get('steps', [])
-        message += "** Application Steps:**\n\n"
-    
-        for step_info in steps:
-            step_num = step_info.get('step', '')
-            action = step_info.get('action', '')
-            details = step_info.get('details', '')
-            
-            message += f"**Step {step_num}: {action}**\n"
-            
-            if isinstance(details, dict):
-                for key, value in details.items():
-                    message += f"- **{key}:** "
-                    if isinstance(value, list):
-                        message += "\n"
-                        for item in value:
-                            message += f"  • {item}\n"
-                    else:
-                        message += f"{value}\n"
-            elif isinstance(details, list):
-                for detail in details:
-                    message += f"- {detail}\n"
-            else:
-                message += f"{details}\n"
-            message += "\n"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-class ActionAdmissionContact(Action):
-    """Display admission office contact information"""
-    def name(self) -> Text:
-        return "action_admission_contact"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_process()
-        if not data:
-            dispatcher.utter_message(text="Sorry, contact information is unavailable.")
-            return []
-        
-        admission = data.get('admission_process', {})
-        contacts = admission.get('contacts', {})
-        
-        message = "** EWU Admission Contact Information**\n\n"
-                # Admission Office
-        admission_office = contacts.get('admission_office', {})
-        message += "** Admission Office**\n"
-        message+= f" Address: {admission_office.get('address', 'N/A')}\n\n"
-        message += "** Phone Numbers:**\n"
-        for phone in admission_office.get('phone', []):
-            message += f"- {phone}\n"
-        message += f"Email: {admission_office.get('email', 'N/A')}\n\n"
-        
-        # Support Contacts
-        support = contacts.get('support', {})
-        message += "** Support Contacts:**\n"
-        message += f" Payment Issues: {support.get('payment_issues', 'N/A')}\n"
-        message += f" Technical Issues: {support.get('technical_issues', 'N/A')}\n"
-        message += f" Advising/Courses: {support.get('advising_or_course_issues', 'N/A')}\n\n"
-        
-        # Registrar
-        registrar = admission.get('registrar', {})
-        message += "** Registrar**\n"
-        message += f"- {registrar.get('name', 'N/A')}\n"
-        message += f"- {registrar.get('designation', 'N/A')}\n"
-        message += f"- {registrar.get('university', 'N/A')}"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-class ActionPostAdmissionGSuite(Action):
-    """Display G Suite email activation instructions"""
-    def name(self) -> Text:
-        return "action_post_admission_g_suite"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_process()
-        if not data:
-            dispatcher.utter_message(text="Sorry, G Suite information is unavailable.")
-            return []
-        
-        g_suite = data.get('admission_process', {}).get('post_admission', {}).get('g_suite_activation', {})
-        
-        message = "** EWU G Suite Email Activation**\n\n"
-        message += f"** Important Note:** {g_suite.get('note', 'N/A')}\n\n"
-        message += f"** Portal Link:** {g_suite.get('link', 'N/A')}\n\n"
-        message += "**Step-by-Step Instructions:**\n"
-        
-        for i, instruction in enumerate(g_suite.get('instructions', []), 1):
-            message += f"{i}. {instruction}\n"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionPostAdmissionDocumentUpload(Action):
-    """Display document upload requirements"""
-    def name(self) -> Text:
-        return "action_post_admission_document_upload"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        
-        data = load_admission_requirements()
-        
-        if not data:
-            dispatcher.utter_message(text="Sorry, admission requirements file not found.")
-            return []
-        
-        required_docs = data.get('admission_requirements', {}).get('required_documents', [])
-        
-        if not required_docs:
-            dispatcher.utter_message(text="Sorry, document information is unavailable.")
-            return []
-        
-        message = "** Required Documents for Admission**\n\n"
-        message += f"**University:** {data.get('university', 'East West University')}\n\n"
-        
-        message += "** Documents You Need to Bring:**\n\n"
-        for i, doc in enumerate(required_docs, 1):
-            message += f"{i}. {doc}\n"
-        
-        message += "\n** Important Note:**\n"
-        message += "• Bring both original documents and photocopies\n"
-        message += "• Original documents will be returned after verification\n"
-        message += "• Make sure all documents are complete and properly attested\n"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-
-
-class ActionPostAdmissionAdvisingSlip(Action):
-    """Display advising slip access information"""
-    def name(self) -> Text:
-        return "action_post_admission_advising_slip"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_process()
-        if not data:
-            dispatcher.utter_message(text="Sorry, advising slip information is unavailable.")
-            return []
-        
-        advising = data.get('admission_process', {}).get('post_admission', {}).get('advising_slip', {})
-        
-        message = "** Advising Slip Access**\n\n"
-        message += f"**Purpose:** {advising.get('purpose', 'N/A')}\n\n"
-        
-        message += "**How to Access (4 Steps):**\n"
-        for i, instruction in enumerate(advising.get('instructions', []), 1):
-            message += f"{i}. {instruction}\n"
-        
-        message += f"\n**Academic Calendar:** {advising.get('academic_calendar_link', 'N/A')}"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-class ActionPostAdmissionTuitionPayment(Action):
-    """Display tuition payment information"""
-    def name(self) -> Text:
-        return "action_post_admission_tuition_payment"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_process()
-        if not data:
-            dispatcher.utter_message(text="Sorry, payment information is unavailable.")
-            return []
-        
-        tuition = data.get('admission_process', {}).get('post_admission', {}).get('tuition_payment', {})
-        
-        message = "** Tuition Payment Information**\n\n"
-        
-        message += "**Requirements:**\n"
-        for req in tuition.get('requirements', []):
-            message += f"✓ {req}\n"
-        
-        message += "**\n**Payment Methods:**\n"
-        for method in tuition.get('payment_methods', []):
-            message += f"- {method}\n"
-        
-        message += f"\n** Important Note:**\n{tuition.get('important_note', 'N/A')}"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-class ActionAdmissionImportantNotes(Action):
-    """Display important admission notes"""
-    def name(self) -> Text:
-        return "action_admission_important_notes"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_process()
-        if not data:
-            dispatcher.utter_message(text="Sorry, important notes are unavailable.")
-            return []
-        
-        notes = data.get('admission_process', {}).get('important_notes', [])
-        
-        message = "** Important Admission Notes**\n\n"
-        for i, note in enumerate(notes, 1):
-            message += f"{i}. {note}\n\n"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-class ActionCompleteAdmissionProcess(Action):
-    """Display complete admission process overview"""
-    def name(self) -> Text:
-        return "action_complete_admission_process"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_process()
-        if not data:
-            dispatcher.utter_message(text="Sorry, admission information is unavailable.")
-            return []
-        
-        message = "** Complete EWU Admission Process**\n\n"
-        
-        message += "**PHASE 1: APPLICATION (11 Steps)**\n"
-        message += "- Visit EWU admission website\n"
-        message += "- Create account and select program\n"
-        message += "- Fill application form\n"
-        message += "- Pay application fee (Tk 1500)\n"
-        message += "- Upload photo & signature\n"
-        message += "- Submit form\n"
-        message += "- Download admit card\n"
-        message += "- Bring documents to exam\n\n"
-        
-        message += "**PHASE 2: POST-ADMISSION SETUP**\n"
-        message += " Activate G Suite email account\n"
-        message += " Upload required academic documents (8 docs)\n"
-        message += " View advising slip with courses\n"
-        message += " Pay tuition via designated banks\n\n"
-        
-        message += "**Need More Information?**\n"
-        message += "Ask about: application steps, documents, email setup, payment methods, or contact info."
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-class ActionAdmissionHelp(Action):
-    """Help with admission queries"""
-    def name(self) -> Text:
-        return "action_admission_help"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        message = "** Admission Help**\n\n"
-        message += "I can help you with:\n"
-        message += "-  Application steps (11 steps detailed)\n"
-        message += "-  Contact information\n"
-        message += "-  Email setup after admission\n"
-        message += "-  Document requirements\n"
-        message += "-  Tuition payment methods\n"
-        message += "-  Advising slip information\n"
-        message += "-  Important policies\n\n"
-        message += "What would you like to know?"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-# ========================================
-# FACILITIES ACTIONS
-# ========================================
-
-class ActionFacilitiesGeneral(Action):
-    def name(self) -> Text:
-        return "action_facilities_general"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            dispatcher.utter_message(text="Sorry, facilities information is unavailable.")
-            return []
-        
-        campus = data['facilities']['campus_life']['available']
-        message = "**East West University Campus Facilities**\n\n"
-        for facility in campus[:7]:
-            message += f" **{facility['name']}**\n{facility['description']}\n\n"
-        message += "*Ask about specific facilities like library, labs, cafeteria, wifi, etc.*"
-        dispatcher.utter_message(text=message)
-        return []
-
-
-class ActionLabFacilities(Action):
-    def name(self) -> Text:
-        return "action_lab_facilities"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        
-        eng_labs = data['facilities']['engineering_labs']
-        message = "**Engineering Laboratories at EWU**\n\n"
-        message += f"**Departments:** {', '.join(eng_labs['departments'])}\n\n"
-        message += "**Available Labs:**\n"
-        for lab in eng_labs['labs'][:5]:
-            message += f" {lab['name']}\n"
-        message += f"\n*Total: {len(eng_labs['labs'])} specialized labs available*"
-        dispatcher.utter_message(text=message)
-        return []
-    
-class ActionFacilitiesGeneral(Action):
-    def name(self) -> Text:
-        return "action_facilities_general"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        message = ("**EWU Facilities**\n\n"
-                  "East West University provides comprehensive facilities including:\n"
-                  " Libraries, Computer Labs, Engineering Labs\n"
-                  " Cafeteria, Prayer Rooms, Common Areas\n"
-                  " Parking, Transportation, Sports Facilities\n"
-                  " Medical Facilities, Hostels\n"
-                  "Research Centers & More!\n\n"
-                  "Ask about any specific facility!")
-        dispatcher.utter_message(text=message)
-        return []
-
-    
-# ========================================
-# MISSING FACILITY ACTIONS
-# ========================================
-
-class ActionCampusLife(Action):
-    def name(self) -> Text:
-        return "action_campus_life"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        campus_life = data.get('facilities', {}).get('campus_life', {})
-        message = f"**Campus Life**\n\n{campus_life.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionCivilEngineeringLabs(Action):
-    def name(self) -> Text:
-        return "action_civil_engineering_labs"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        labs = data.get('facilities', {}).get('civil_engineering_labs', {})
-        message = f"**Civil Engineering Labs**\n\n{labs.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionEngineeringLabs(Action):
-    def name(self) -> Text:
-        return "action_engineering_labs"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        labs = data.get('facilities', {}).get('engineering_labs', {})
-        message = f"**Engineering Labs**\n\n{labs.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionICSServices(Action):
-    def name(self) -> Text:
-        return "action_ics_services"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        ics = data.get('facilities', {}).get('ics_services', {})
-        message = f"**ICS Services**\n\n{ics.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionPharmacyLabs(Action):
-    def name(self) -> Text:
-        return "action_pharmacy_labs"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        labs = data.get('facilities', {}).get('pharmacy_labs', {})
-        message = f"**Pharmacy Labs**\n\n{labs.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionResearchCenter(Action):
-    def name(self) -> Text:
-        return "action_research_center"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        center = data.get('facilities', {}).get('research_center', {})
-        message = f"**Research Center**\n\n{center.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionComputerLab(Action):
-    def name(self) -> Text:
-        return "action_computer_lab"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        lab = data.get('facilities', {}).get('computer_lab', {})
-        message = f"**Computer Lab**\n\n{lab.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionWiFiInternet(Action):
-    def name(self) -> Text:
-        return "action_wifi_internet"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        wifi = data.get('facilities', {}).get('wifi_internet', {})
-        message = f"**WiFi & Internet**\n\n{wifi.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionParkingFacilities(Action):
-    def name(self) -> Text:
-        return "action_parking_facilities"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        parking = data.get('facilities', {}).get('parking_facilities', {})
-        message = f"**Parking Facilities**\n\n{parking.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionSportsFacilities(Action):
-    def name(self) -> Text:
-        return "action_sports_facilities"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        sports = data.get('facilities', {}).get('sports_facilities', {})
-        message = f"**Sports Facilities**\n\n{sports.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionHostelFacilities(Action):
-    def name(self) -> Text:
-        return "action_hostel_facilities"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        hostel = data.get('facilities', {}).get('hostel_facilities', {})
-        message = f"**Hostel Facilities**\n\n{hostel.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionMedicalFacilities(Action):
-    def name(self) -> Text:
-        return "action_medical_facilities"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        medical = data.get('facilities', {}).get('medical_facilities', {})
-        message = f"**Medical Facilities**\n\n{medical.get('description', 'Yes, medical facilities are available https://www.ewubd.edu/admin-office/ewu-medical-centre')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionPrayerRoom(Action):
-    def name(self) -> Text:
-        return "action_prayer_room"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        prayer = data.get('facilities', {}).get('prayer_room', {})
-        message = f"**Prayer Room**\n\n{prayer.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionCommonRoom(Action):
-    def name(self) -> Text:
-        return "action_common_room"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        common = data.get('facilities', {}).get('common_room', {})
-        message = f"**Common Room**\n\n{common.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionCareerCounseling(Action):
-    def name(self) -> Text:
-        return "action_career_counseling"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        career = data.get('facilities', {}).get('career_counseling', {})
-        message = f"**Career Counseling**\n\n{career.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-# ========================================
-# MISSING FACILITY ACTIONS (4 remaining)
-# ========================================
-
-class ActionCafeteriaFacilities(Action):
-    def name(self) -> Text:
-        return "action_cafeteria_facilities"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        cafeteria = data.get('facilities', {}).get('cafeteria', {})
-        message = f"**Cafeteria Facilities**\n\n{cafeteria.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacilitiesGeneral(Action):
-    def name(self) -> Text:
-        return "action_facilities_general"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        message = "**EWU Facilities**\n\nEast West University provides world-class facilities for students including libraries, labs, sports centers, and more. Which facility would you like to know more about?"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionLibraryFacilities(Action):
-    def name(self) -> Text:
-        return "action_library_facilities"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        library = data.get('facilities', {}).get('library', {})
-        message = f"**Library Facilities**\n\n{library.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionTransportationFacilities(Action):
-    def name(self) -> Text:
-        return "action_transportation_facilities"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        transport = data.get('facilities', {}).get('transportation', {})
-        message = f"**Transportation Facilities**\n\n{transport.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-
-# ========================================
-# EVENTS ACTIONS
-# ========================================
-
-class ActionEventsWorkshops(Action):
-    def name(self) -> Text:
-        return "action_events_workshops"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_events()
-        if not data:
-            dispatcher.utter_message(text="Sorry, events information is unavailable.")
-            return []
-        
-        message = f"**{data['page_info']['title']}**\n\n"
-        for event in data['events_workshops'][:5]:
-            message += f" **{event['date']}**\n**{event['title']}**\n{event.get('description', '')}\n\n"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionRecentEvents(Action):
-    def name(self) -> Text:
-        return "action_recent_events"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_events()
-        if not data:
-            return []
-        
-        message = "**Recent Events at EWU**\n\n"
-        for event in data['events_workshops'][:3]:
-            message += f" **{event['date']}**\n"
-            message += f"**{event['title']}**\n"
-            message += f"{event.get('description', '')}\n\n"
-        dispatcher.utter_message(text=message)
-        return []
-
-# ========================================
-# FACULTY ACTIONS
-# ========================================
-
-class ActionFacultyInfo(Action):
-    def name(self) -> Text:
-        return "action_faculty_info"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            dispatcher.utter_message(text="Sorry, faculty information is unavailable.")
-            return []
-        
-        message = "**Faculty Information - East West University**\n\n"
-        message += f"**Total Departments:** {len(data.get('departments', []))}\n\n"
-        message += "**Available Departments:**\n"
-        for dept in list(data.get('departments', []))[:8]:
-            name = dept.get('department_name', 'Unknown')
-            message += f" {name}\n"
-        message += "\n*As about specific department faculty (e.g., CSE faculty, BBA faculty)*"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyCSE(Action):
-    def name(self) -> Text:
-        return "action_faculty_cse"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        cse_dept = next((d for d in data.get('departments', [])
-                        if 'CSE' in d.get('department_name', '') or 'Computer Science' in d.get('department_name', '')), None)
-        if cse_dept and 'faculty_members' in cse_dept:
-            message = f"**{cse_dept['department_name']} Faculty**\n\n"
-            for faculty in cse_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(cse_dept['faculty_members'])
-            message += f"*Total CSE Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyBBA(Action):
-    def name(self) -> Text:
-        return "action_faculty_bba"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        bba_dept = next((d for d in data.get('departments', [])
-                        if 'BBA' in d.get('department_name', '') or 'Business' in d.get('department_name', '')), None)
-        if bba_dept and 'faculty_members' in bba_dept:
-            message = f"**{bba_dept['department_name']} Faculty**\n\n"
-            for faculty in bba_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(bba_dept['faculty_members'])
-            message += f"*Total BBA Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-    
-class ActionFacultyEEE(Action):
-    def name(self) -> Text:
-        return "action_faculty_eee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        eee_dept = next((d for d in data.get('departments', [])
-                        if 'EEE' in d.get('department_name', '') or 'Electrical' in d.get('department_name', '')), None)
-        if eee_dept and 'faculty_members' in eee_dept:
-            message = f"**{eee_dept['department_name']} Faculty**\n\n"
-            for faculty in eee_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(eee_dept['faculty_members'])
-            message += f"*Total EEE Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyICE(Action):
-    def name(self) -> Text:
-        return "action_faculty_ice"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        ice_dept = next((d for d in data.get('departments', [])
-                        if 'ICE' in d.get('department_name', '') or 'Communication' in d.get('department_name', '')), None)
-        if ice_dept and 'faculty_members' in ice_dept:
-            message = f"**{ice_dept['department_name']} Faculty**\n\n"
-            for faculty in ice_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(ice_dept['faculty_members'])
-            message += f"*Total ICE Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyPharmacy(Action):
-    def name(self) -> Text:
-        return "action_faculty_pharmacy"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        pharm_dept = next((d for d in data.get('departments', [])
-                          if 'Pharmacy' in d.get('department_name', '')), None)
-        if pharm_dept and 'faculty_members' in pharm_dept:
-            message = f"**{pharm_dept['department_name']} Faculty**\n\n"
-            for faculty in pharm_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(pharm_dept['faculty_members'])
-            message += f"*Total Pharmacy Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyCivil(Action):
-    def name(self) -> Text:
-        return "action_faculty_civil"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        civil_dept = next((d for d in data.get('departments', [])
-                          if 'Civil' in d.get('department_name', '')), None)
-        if civil_dept and 'faculty_members' in civil_dept:
-            message = f"**{civil_dept['department_name']} Faculty**\n\n"
-            for faculty in civil_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(civil_dept['faculty_members'])
-            message += f"*Total Civil Engineering Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyGEB(Action):
-    def name(self) -> Text:
-        return "action_faculty_geb"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        geb_dept = next((d for d in data.get('departments', [])
-                        if 'GEB' in d.get('department_name', '') or 'Genetic Engineering' in d.get('department_name', '')), None)
-        if geb_dept and 'faculty_members' in geb_dept:
-            message = f"**{geb_dept['department_name']} Faculty**\n\n"
-            for faculty in geb_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(geb_dept['faculty_members'])
-            message += f"*Total GEB Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyEconomics(Action):
-    def name(self) -> Text:
-        return "action_faculty_economics"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        econ_dept = next((d for d in data.get('departments', [])
-                         if 'Economics' in d.get('department_name', '')), None)
-        if econ_dept and 'faculty_members' in econ_dept:
-            message = f"**{econ_dept['department_name']} Faculty**\n\n"
-            for faculty in econ_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(econ_dept['faculty_members'])
-            message += f"*Total Economics Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyEnglish(Action):
-    def name(self) -> Text:
-        return "action_faculty_english"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        eng_dept = next((d for d in data.get('departments', [])
-                        if 'English' in d.get('department_name', '')), None)
-        if eng_dept and 'faculty_members' in eng_dept:
-            message = f"**{eng_dept['department_name']} Faculty**\n\n"
-            for faculty in eng_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(eng_dept['faculty_members'])
-            message += f"*Total English Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyLaw(Action):
-    def name(self) -> Text:
-        return "action_faculty_law"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        law_dept = next((d for d in data.get('departments', [])
-                        if 'Law' in d.get('department_name', '')), None)
-        if law_dept and 'faculty_members' in law_dept:
-            message = f"**{law_dept['department_name']} Faculty**\n\n"
-            for faculty in law_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(law_dept['faculty_members'])
-            message += f"*Total Law Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyMath(Action):
-    def name(self) -> Text:
-        return "action_faculty_math"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        math_dept = next((d for d in data.get('departments', [])
-                         if 'Mathematics' in d.get('department_name', '')), None)
-        if math_dept and 'faculty_members' in math_dept:
-            message = f"**{math_dept['department_name']} Faculty**\n\n"
-            for faculty in math_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(math_dept['faculty_members'])
-            message += f"*Total Mathematics Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultySociology(Action):
-    def name(self) -> Text:
-        return "action_faculty_sociology"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        soc_dept = next((d for d in data.get('departments', [])
-                        if 'Sociology' in d.get('department_name', '')), None)
-        if soc_dept and 'faculty_members' in soc_dept:
-            message = f"**{soc_dept['department_name']} Faculty**\n\n"
-            for faculty in soc_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(soc_dept['faculty_members'])
-            message += f"*Total Sociology Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyInformationStudies(Action):
-    def name(self) -> Text:
-        return "action_faculty_information_studies"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        is_dept = next((d for d in data.get('departments', [])
-                       if 'Information Studies' in d.get('department_name', '')), None)
-        if is_dept and 'faculty_members' in is_dept:
-            message = f"**{is_dept['department_name']} Faculty**\n\n"
-            for faculty in is_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(is_dept['faculty_members'])
-            message += f"*Total Information Studies Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyPPHS(Action):
-    def name(self) -> Text:
-        return "action_faculty_pphs"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        pphs_dept = next((d for d in data.get('departments', [])
-                         if 'PPHS' in d.get('department_name', '') or 'Public Health' in d.get('department_name', '')), None)
-        if pphs_dept and 'faculty_members' in pphs_dept:
-            message = f"**{pphs_dept['department_name']} Faculty**\n\n"
-            for faculty in pphs_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(pphs_dept['faculty_members'])
-            message += f"*Total PPHS Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyDataScience(Action):
-    def name(self) -> Text:
-        return "action_faculty_data_science"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        ds_dept = next((d for d in data.get('departments', [])
-                       if 'Data Science' in d.get('department_name', '') or 'Analytics' in d.get('department_name', '')), None)
-        if ds_dept and 'faculty_members' in ds_dept:
-            message = f"**{ds_dept['department_name']} Faculty**\n\n"
-            for faculty in ds_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(ds_dept['faculty_members'])
-            message += f"*Total Data Science Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultySocialRelations(Action):
-    def name(self) -> Text:
-        return "action_faculty_social_relations"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        sr_dept = next((d for d in data.get('departments', [])
-                       if 'Social Relations' in d.get('department_name', '')), None)
-        if sr_dept and 'faculty_members' in sr_dept:
-            message = f"**{sr_dept['department_name']} Faculty**\n\n"
-            for faculty in sr_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(sr_dept['faculty_members'])
-            message += f"*Total Social Relations Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-# ========================================
-# CHAIRPERSON INFORMATION ACTION
-# ========================================
-
-class ActionChairpersonInfo(Action):
-    def name(self) -> Text:
-        return "action_chairperson_info"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            dispatcher.utter_message(text="Sorry, chairperson information is currently unavailable.")
-            return []
-        
-        # Find all chairpersons (those with "Chairperson" in designation)
-        chairpersons = [f for f in data.get('faculty', []) 
-                       if 'Chairperson' in f.get('designation', '')]
-        
-        if chairpersons:
-            message = "**Department Chairpersons at EWU**\n\n"
-            for chair in chairpersons:
-                message += f" **{chair.get('name', 'N/A')}**\n"
-                message += f"   Department: {chair.get('department', 'N/A')}\n"
-                message += f"   Position: {chair.get('designation', 'N/A')}\n"
-                if 'profile_url' in chair:
-                    message += f"  Profile: {chair['profile_url']}\n"
-                message += "\n"
-            dispatcher.utter_message(text=message)
-        else:
-            dispatcher.utter_message(text="Chairperson information not available.")
-        return []
-
-
-# ========================================
-# GRADING SYSTEM ACTION
-# ========================================
-
-class ActionGradingSystem(Action):
-    def name(self) -> Text:
-        return "action_grading_system"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_grading()
-        if not data:
-            dispatcher.utter_message(text="Sorry, grading information is unavailable.")
-            return []
-        
-        grading = data['grading_system']
-        message = f"**{grading['title']}**\n\n"
-        message += f"{grading['description']}\n\n"
-        message += "**Grade Scale:**\n"
-        for grade in grading['grade_scale']:
-            message += f"- **{grade['letter_grade']}**: {grade['numerical_score']} – {grade['grade_point']} GPA\n"
-        
-        message += "\n**Special Grades:**\n"
-        for spec_grade in grading['special_grades']:
-            message += f"- **{spec_grade['grade']}**: {spec_grade['description']}\n"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-
-import requests
-from rasa_sdk import Action, Tracker
-from rasa_sdk.executor import CollectingDispatcher
+import asyncio
 from typing import Any, Text, Dict, List
 import logging
+from rasa_sdk import Action, Tracker
+from rasa_sdk.executor import CollectingDispatcher
+from rasa_sdk.events import SlotSet
+import requests
+import re
+import json
+
+from sentence_transformers import SentenceTransformer
 
 logger = logging.getLogger(__name__)
+_embedder = SentenceTransformer("intfloat/multilingual-e5-small")
 
 
-class ActionPhi3RagAnswer(Action):
-    """RAG-powered answer generation using TinyLlama"""
-    
-    def name(self) -> Text:
-        return "action_phi3_rag_answer"
-    
-    def run(
-        self,
-        dispatcher: CollectingDispatcher,
-        tracker: Tracker,
-        domain: Dict[Text, Any],
-    ) -> List[Dict[Text, Any]]:
-        
-        user_message = tracker.latest_message.get("text", "")
-        
-        if not user_message.strip():
-            dispatcher.utter_message(text="I didn't catch that. Could you please rephrase?")
-            return []
-        
-        # Build conversation history (for future use)
-        history = self._build_history(tracker)
-        
-        # Call RAG service with TinyLlama
-        answer, confidence, sources, processing_time = self._call_rag(user_message)
-        
-        # Send appropriate response based on confidence
-        self._send_response(dispatcher, answer, confidence, sources, processing_time)
-        
-        return []
-    
-    def _call_rag(self, query: str) -> tuple:
-        """
-        Call RAG service (TinyLlama-powered) and return structured response
-        
-        Returns:
-            (answer, confidence, sources, processing_time)
-        """
-        try:
-            # FIXED: Only send what the API accepts
-            payload = {
-                "query": query,
-                "top_k": 5  # Increased for better context
-            }
-            
-            logger.info(f"Calling RAG with query: {query[:50]}...")
-            
-            response = requests.post(
-                "http://localhost:8000/phi3_rag",
-                json=payload,
-                timeout=500
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                # FIXED: Use correct field names from FastAPI QueryResponse
-                answer = data.get("response", "")  # NOT "answer"
-                confidence = float(data.get("confidence", 0.0))
-                sources = data.get("sources", [])
-                processing_time = data.get("processing_time", 0.0)
-                
-                logger.info(
-                    f"RAG response received - Confidence: {confidence:.2f}, "
-                    f"Time: {processing_time:.2f}s, Sources: {len(sources)}"
-                )
-                
-                return answer, confidence, sources, processing_time
-            
-            else:
-                logger.error(f"RAG service error: {response.status_code} - {response.text}")
-                return (
-                    "I'm having trouble connecting to my knowledge base.",
-                    0.0,
-                    [],
-                    0.0
-                )
-                
-        except requests.Timeout:
-            logger.error("RAG service timeout")
-            return (
-                "The request is taking too long. Please try again.",
-                0.0,
-                [],
-                0.0
-            )
-        except requests.ConnectionError:
-            logger.error("RAG service connection error")
-            return (
-                "I can't connect to the answer service. Please try again later.",
-                0.0,
-                [],
-                0.0
-            )
-        except Exception as e:
-            logger.exception(f"Unexpected RAG error: {e}")
-            return (
-                "Something went wrong while processing your question.",
-                0.0,
-                [],
-                0.0
-            )
-    
-    def _send_response(
-        self,
-        dispatcher: CollectingDispatcher,
-        answer: str,
-        confidence: float,
-        sources: List[str],
-        processing_time: float
-    ):
-        """
-        Send response to user with appropriate formatting based on confidence
-        
-        Confidence levels:
-        - >= 0.7: High confidence - send answer with sources
-        - 0.5-0.7: Medium confidence - send answer with disclaimer
-        - < 0.5: Low confidence - suggest contacting admissions
-        """
-        
-        if not answer or confidence < 0.4:
-            # Very low confidence - direct to admissions
-            dispatcher.utter_message(
-                text=(
-                    "I don't have reliable information about this. "
-                    "For accurate details, please contact:\n"
-                    " admissions@ewubd.edu\n"
-                )
-            )
-        
-        elif confidence < 0.2:
-            # Low-medium confidence - answer with strong disclaimer
-            dispatcher.utter_message(
-                text=f" {answer}\n\n"
-                     "Note: I'm not entirely confident about this answer. "
-                     "Please verify with admissions@ewubd.edu"
-            )
-        
-        elif confidence < 0.3:
-            # Medium confidence - answer with mild disclaimer
-            dispatcher.utter_message(text=answer)
-            dispatcher.utter_message(
-                text=" For confirmation, you can contact admissions@ewubd.edu"
-            )
-        
-        else:
-            # High confidence - send clean answer
-            dispatcher.utter_message(text=answer)
-            
-            # Add sources for transparency (only show top 2)
-            if sources:
-                unique_sources = sorted(set(sources))[:2]
-                source_names = [s.replace('.json', '').replace('_', ' ').title() 
-                               for s in unique_sources]
-                
-                dispatcher.utter_message(
-                    text=f" Source: {', '.join(source_names)}"
-                )
-        
-        # Log performance (for monitoring)
-        logger.info(
-            f"Response sent - Confidence: {confidence:.2f}, "
-            f"Time: {processing_time:.2f}s"
-        )
-    
-    def _build_history(self, tracker: Tracker) -> str:
-        """
-        Extract last 3 conversation turns (for future use)
-        
-        Note: Current RAG API doesn't use history yet, but keeping
-        this for potential future enhancement
-        """
-        events = tracker.events
-        history = []
-        
-        for event in reversed(events[-12:]):  # Look at more events
-            if event.get("event") == "user":
-                text = event.get("text", "")
-                if text and text.strip():
-                    history.append(f"User: {text}")
-            elif event.get("event") == "bot":
-                text = event.get("text", "")
-                # Skip system messages
-                if text and not text.startswith(("", "", "")):
-                    history.append(f"Bot: {text}")
-            
-            # Stop once we have 3 full exchanges
-            if len(history) >= 6:
-                break
-        
-        return "\n".join(reversed(history[-6:]))
+def embed_query(text: str) -> list:
+    """
+    Encodes the query with multilingual-e5-small.
+    Works natively for Bangla/Banglish — no translation required.
+    """
+    return _embedder.encode(f"query: {text}", normalize_embeddings=True).tolist()
 
 
-# class ActionDefaultFallback(Action):
-#     """Fallback to RAG for unrecognized intents"""
-    
-#     def name(self) -> Text:
-#         return "action_default_fallback"
-    
-#     def run(
-#         self,
-#         dispatcher: CollectingDispatcher,
-#         tracker: Tracker,
-#         domain: Dict[Text, Any],
-#     ) -> List[Dict[Text, Any]]:
-        
-#         user_message = tracker.latest_message.get("text", "")
-        
-#         logger.info(f"Fallback triggered for: {user_message}")
-        
-#         # Try RAG for unrecognized intents
-#         rag_action = ActionPhi3RagAnswer()
-#         return rag_action.run(dispatcher, tracker, domain)
+API_BASE_URL = "https://ewu-server.onrender.com/api"
+API_KEY      = "i6EDytaX4E2jI6GvZQc0b1RSZHTI5_wVRa2rfL7rLpk"
+HEADERS      = {"x-api-key": API_KEY}
+
+GITHUB_RAW_BASE = "https://raw.githubusercontent.com/Atkiya/jsonfiles/main"
+GITHUB_DATA_SOURCES = {
+    "admission_process": "dynamic_admission_process.json",
+    "facilities":        "dynamic_facilites.json",
+    "static_programs":   "static_Programs.json",
+    # Graduate program course files
+    "ma_english":        "ma_english.json",
+    "mba_emba":          "mba_emba.json",
+    "ms_cse":            "ms_cse.json",
+    "ms_dsa":            "ms_dsa.json",
+    "mds":               "mds.json",
+    "mphil_pharmacy":    "mphil_pharmacy.json",
+    "mss_eco":           "mss_eco.json",
+    # Undergraduate program course files
+    "bba":               "bba.json",
+    "st_ba":             "st_ba.json",
+    "tesol":             "tesol.json",    
+    "st_cse":            "st_cse.json",
+    "st_eee":            "st_eee.json",
+    "st_ce":             "st_ce.json",
+    "st_english":        "st_english.json",
+    "st_pharmacy":       "st_pharmacy.json",
+    "st_law":            "st_law.json",
+    "st_economics":      "st_economics.json",
+    "st_sociology":      "st_sociology.json",
+    "helpdesk_contacts": "static_helpdesk.json"
+}
+
+# ─────────────────────────────────────────────
+# LANGUAGE HELPERS
+# ─────────────────────────────────────────────
+
+_BANGLA_UNICODE_MIN = 0x0980
+_BANGLA_UNICODE_MAX = 0x09FF
+
+_BANGLISH_KEYWORDS = {
+    "ami", "tumi", "apni", "ki", "koto", "kothay", "ache", "hobe",
+    "hoy", "jai", "jabo", "dao", "nao", "bolo", "dekho", "jano",
+    "chai", "lagbe", "korte", "kore", "hoyeche", "pabo", "dite", "nite",
+    "theke", "boro", "chhoto", "valo", "bhalo", "kharap", "ektu", "onek",
+    "shob", "keu", "kono", "amar", "tomar", "tar", "eta", "ota",
+    "ekhane", "okhane", "kobe", "keno", "kemne", "kivabe",
+}
+
+def detect_language(text: str) -> str:
+    """Returns 'bangla', 'banglish', or 'english'."""
+    if any(_BANGLA_UNICODE_MIN <= ord(ch) <= _BANGLA_UNICODE_MAX for ch in text):
+        return "bangla"
+    try:
+        from langdetect import detect as ld, LangDetectException
+        if ld(text) in ("bn", "hi"):
+            return "banglish"
+    except Exception:
+        pass
+    if set(text.lower().split()) & _BANGLISH_KEYWORDS:
+        return "banglish"
+    return "english"
 
 
+_LANG_PREFIX = {
+    "bangla":   " EWU তথ্য:\n\n",
+    "banglish": " EWU Info:\n\n",
+    "english":  "",
+}
+_LANG_SUFFIX = {
+    "bangla":   "\n\n(বিস্তারিত জানতে: admissions@ewubd.edu |  09666775577)",
+    "banglish": "\n\n(Beshi info er jonno: admissions@ewubd.edu |  09666775577)",
+    "english":  "",
+}
+_NO_INFO_MSG = {
+    "bangla":   "দুঃখিত, এই বিষয়ে কোনো তথ্য পাওয়া যায়নি।",
+    "banglish": "Khed, ei bishoy e kono info pai ni.",
+    "english":  "Sorry, I couldn't find information on that.",
+}
+_CONTACT_MSG = {
+    "bangla": (
+        "দুঃখিত, সুনির্দিষ্ট তথ্য পাওয়া যায়নি। আপনি:\n"
+        "• ওয়েবসাইট দেখুন: https://www.ewubd.edu\n"
+        "• ইমেইল করুন: admissions@ewubd.edu\n"
+        "• ফোন করুন: 09666775577, Ext. 234"
+    ),
+    "banglish": (
+        "Sorry, specific info pailam na. Apni:\n"
+        "• Website: https://www.ewubd.edu\n"
+        "• Email: admissions@ewubd.edu\n"
+        "• Phone: 09666775577, Ext. 234"
+    ),
+    "english": (
+        "I'm sorry, I couldn't find specific information about that. You can:\n"
+        "• Visit our website: https://www.ewubd.edu\n"
+        "• Contact Admissions: admissions@ewubd.edu\n"
+        "• Call: 09666775577, Ext. 234 | +8801755587224 (Hotline)"
+    ),
+}
 
-
-
-# ============================================================================
-# DEPARTMENT TO FILE MAPPING
-# ============================================================================
-
-DEPARTMENT_FILES = {
-    # Undergraduate
-    "cse": "st_cse.json",
-    "computer science": "st_cse.json",
-    "cs": "st_cse.json",
-    
-    "eee": "st_eee.json",
-    "electrical": "st_eee.json",
-    
-    "ece": "st_ece.json",
-    "electronics": "st_ece.json",
-    
-    "ce": "st_ce.json",
-    "civil": "st_ce.json",
-    
-    "bba": "st_ba.json",
-    "business": "st_ba.json",
-    
-    "economics": "st_economics.json",
-    "eco": "st_economics.json",
-    
-    "english": "st_english.json",
-    "eng": "st_english.json",
-    
-    "pharmacy": "st_pharmacy.json",
-    "pharm": "st_pharmacy.json",
-    
-    "law": "st_law.json",
-    
-    "math": "st_math.json",
-    "mathematics": "st_math.json",
-    
-    "sociology": "st_sociology.json",
-    "soc": "st_sociology.json",
-    
-    "social relations": "st_social_relations.json",
-    
-    # Graduate
-    "mba": "mba_emba.json",
-    "emba": "mba_emba.json",
-    
-    "ms cse": "ms_cse.json",
-    "msc cse": "ms_cse.json",
-    
-    "ms dsa": "ms_dsa.json",
-    "data science": "ms_dsa.json",
-    
-    "ma english": "ma_english.json",
-    
-    "mds": "mds.json",
-    "development studies": "mds.json",
-    
-    "mss economics": "mss_eco.json",
-    "mss eco": "mss_eco.json",
-    
-    "mphil pharmacy": "mphil_pharmacy.json",
-    
-    "tesol": "tesol.json",
+_LOCALIZE_REPLACEMENTS = {
+    "bangla": {
+        " EWU Undergraduate Admission — Application Steps": " EWU স্নাতক ভর্তি — আবেদন করার ধাপসমূহ",
+        " EWU Graduate Admission — Application Steps": " EWU স্নাতকোত্তর ভর্তি — আবেদন করার ধাপসমূহ",
+        " EWU Online Admission — Step-by-Step Guide": " EWU অনলাইন ভর্তি — ধাপে ধাপে গাইড",
+        " EWU Admission Application Fee": " EWU ভর্তি আবেদন ফি",
+        " EWU Admission — Required Documents and Uploads": " EWU ভর্তি — প্রয়োজনীয় কাগজপত্র ও আপলোড",
+        " EWU Admission — Login and EWU Login ID": " EWU ভর্তি — লগইন ও EWU লগইন আইডি",
+        " EWU Admission Test — Admit Card and Instructions": " EWU ভর্তি পরীক্ষা — অ্যাডমিট কার্ড ও নির্দেশনা",
+        " EWU Admission — How to Fill and Submit the Online Form": " EWU ভর্তি — অনলাইন ফর্ম কীভাবে পূরণ ও জমা দিতে হবে",
+        " East West University Location": " ইস্ট ওয়েস্ট ইউনিভার্সিটির অবস্থান",
+        " East West University Vision": " ইস্ট ওয়েস্ট ইউনিভার্সিটির ভিশন",
+        " East West University Mission": " ইস্ট ওয়েস্ট ইউনিভার্সিটির মিশন",
+        " East West University History": " ইস্ট ওয়েস্ট ইউনিভার্সিটির ইতিহাস",
+        " East West University Departments": " ইস্ট ওয়েস্ট ইউনিভার্সিটির বিভাগসমূহ",
+        " East West University Programs": " ইস্ট ওয়েস্ট ইউনিভার্সিটির প্রোগ্রামসমূহ",
+        " Available Course Programs": " উপলভ্য কোর্স প্রোগ্রামসমূহ",
+        " Course Information": " কোর্স তথ্য",
+        " EWU Grading System": " EWU গ্রেডিং সিস্টেম",
+        " EWU Tuition Fees Overview": " EWU টিউশন ফি সংক্ষিপ্তসার",
+        " EWU Scholarships": " EWU স্কলারশিপসমূহ",
+        " EWU Helpdesk Contacts": " EWU হেল্পডেস্ক যোগাযোগসমূহ",
+        " EWU Admission Deadlines": " EWU ভর্তি আবেদনের শেষ তারিখসমূহ",
+        " EWU Admission Requirements": " EWU ভর্তি যোগ্যতা ও শর্তাবলি",
+        " EWU General Conduct Rules": " EWU সাধারণ আচরণবিধি",
+        " EWU Clubs and Societies": " EWU ক্লাব ও সংগঠনসমূহ",
+        " EWU Alumni Network": " EWU অ্যালামনাই নেটওয়ার্ক",
+        " EWU Recent Events": " EWU ইভেন্টসমূহ",
+        " EWU Latest Notices": " EWU সর্বশেষ নোটিশসমূহ",
+        " EWU Governance": " EWU পরিচালনা কাঠামো",
+        " EWU International Partnerships": " EWU আন্তর্জাতিক পার্টনারশিপসমূহ",
+        " EWU Newsletters": " EWU নিউজলেটারসমূহ",
+        " EWU Proctor Schedule": " EWU প্রক্টর সময়সূচি",
+        " EWU Exam Schedule": " EWU পরীক্ষার সময়সূচি",
+        " EWU Academic Calendar": " EWU একাডেমিক ক্যালেন্ডার",
+        "Admission Office": "ভর্তি অফিস",
+        "Address": "ঠিকানা",
+        "Phone": "ফোন",
+        "Mobile": "মোবাইল",
+        "Email": "ইমেইল",
+        "Website": "ওয়েবসাইট",
+        "Web": "ওয়েব",
+        "Code": "কোড",
+        "Title": "শিরোনাম",
+        "Credits": "ক্রেডিট",
+        "Prerequisites": "পূর্বশর্ত",
+        "Description": "বিবরণ",
+        "Program": "প্রোগ্রাম",
+        "Programs": "প্রোগ্রামসমূহ",
+        "Type": "ধরণ",
+        "Section": "সেকশন",
+        "Total returned": "মোট পাওয়া গেছে",
+        "Faculty of Science and Engineering": "বিজ্ঞান ও প্রকৌশল অনুষদ",
+        "Faculty of Business and Economics": "ব্যবসা ও অর্থনীতি অনুষদ",
+        "Faculty of Arts and Social Sciences": "কলা ও সমাজবিজ্ঞান অনুষদ",
+        "Other Academic Units": "অন্যান্য একাডেমিক ইউনিট",
+        "Undergraduate Programs (Per Credit)": "স্নাতক প্রোগ্রামসমূহ (প্রতি ক্রেডিট)",
+        "Graduate Programs (Per Credit)": "স্নাতকোত্তর প্রোগ্রামসমূহ (প্রতি ক্রেডিট)",
+        "Undergraduate": "স্নাতক",
+        "Graduate": "স্নাতকোত্তর",
+        "Postgraduate": "স্নাতকোত্তর",
+        "Grade Scale": "গ্রেড স্কেল",
+        "Special Grades": "বিশেষ গ্রেড",
+        "Eligibility": "যোগ্যতা",
+        "Amount/Waiver": "পরিমাণ/ওয়েভার",
+        "Min CGPA": "ন্যূনতম সিজিপিএ",
+        "Freedom Fighter's Scholarship": "মুক্তিযোদ্ধা কোটার স্কলারশিপ",
+        "Graduate Scholarships": "স্নাতকোত্তর স্কলারশিপ",
+        "Based on Bachelor's CGPA": "স্নাতক সিজিপিএর ভিত্তিতে",
+        "Academic": "একাডেমিক",
+        "Administrative": "প্রশাসনিক",
+        "Dept": "বিভাগ",
+        "Purpose": "উদ্দেশ্য",
+        "Deadline": "শেষ তারিখ",
+        "Test": "পরীক্ষা",
+        "Required Documents": "প্রয়োজনীয় কাগজপত্র",
+        "Bachelor's Degree": "স্নাতক ডিগ্রি",
+        "SSC & HSC GPA": "এসএসসি ও এইচএসসি জিপিএ",
+        "SSC & HSC": "এসএসসি ও এইচএসসি",
+        "Diploma": "ডিপ্লোমা",
+        "Expected Behavior": "প্রত্যাশিত আচরণ",
+        "Academic Misconduct (Zero Tolerance)": "একাডেমিক অসদাচরণ (শূন্য সহনশীলতা)",
+        "Social Misconduct": "সামাজিক অসদাচরণ",
+        "Notable Alumni": "উল্লেখযোগ্য অ্যালামনাই",
+        "Achievement": "অর্জন",
+        "Position": "পদবি",
+        "Country": "দেশ",
+        "Partnership": "পার্টনারশিপ",
+        "Chairperson": "চেয়ারপারসন",
+        "Step-by-Step Guide": "ধাপে ধাপে গাইড",
+        "Application Steps": "আবেদন করার ধাপসমূহ",
+        "Application Fee": "আবেদন ফি",
+        "Step": "ধাপ",
+        "Note": "নোট",
+        "Tip": "পরামর্শ",
+        "Need help?": "সহায়তা দরকার?",
+        "Recent": "সাম্প্রতিক",
+        "Format": "ফরম্যাট",
+        "Max size": "সর্বোচ্চ সাইজ",
+        "Printed Admit Card": "প্রিন্ট করা অ্যাডমিট কার্ড",
+        "Original": "মূল",
+        "Example": "উদাহরণ",
+        "Save": "সেভ",
+        "Preview": "প্রিভিউ",
+        "Submit Form": "ফর্ম সাবমিট",
+        "No course data found for": "এই বিভাগের কোনো কোর্স তথ্য পাওয়া যায়নি:",
+        "No": "না",
+        "Yes": "হ্যাঁ",
+    },
+    "banglish": {
+        " EWU Undergraduate Admission — Application Steps": " EWU Undergraduate Admission — Apply korar steps",
+        " EWU Graduate Admission — Application Steps": " EWU Graduate Admission — Apply korar steps",
+        " EWU Online Admission — Step-by-Step Guide": " EWU Online Admission — Step by step guide",
+        " EWU Admission Application Fee": " EWU Admission Application Fee",
+        " EWU Admission — Required Documents and Uploads": " EWU Admission — Required documents o uploads",
+        " EWU Admission — Login and EWU Login ID": " EWU Admission — Login o EWU Login ID",
+        " EWU Admission Test — Admit Card and Instructions": " EWU Admission Test — Admit card o instructions",
+        " EWU Admission — How to Fill and Submit the Online Form": " EWU Admission — Online form kivabe fill-up o submit korben",
+        " East West University Location": " East West University er location",
+        " East West University Vision": " East West University er vision",
+        " East West University Mission": " East West University er mission",
+        " East West University History": " East West University er history",
+        " East West University Departments": " East West University er department gulo",
+        " East West University Programs": " East West University er program gulo",
+        " Available Course Programs": " Available course program gulo",
+        " Course Information": " Course info",
+        " EWU Grading System": " EWU grading system",
+        " EWU Tuition Fees Overview": " EWU tuition fees overview",
+        " EWU Scholarships": " EWU scholarship gulo",
+        " EWU Helpdesk Contacts": " EWU helpdesk contacts",
+        " EWU Admission Deadlines": " EWU admission deadline gulo",
+        " EWU Admission Requirements": " EWU admission requirements",
+        " EWU General Conduct Rules": " EWU general conduct rules",
+        " EWU Clubs and Societies": " EWU clubs o societies",
+        " EWU Alumni Network": " EWU alumni network",
+        " EWU Recent Events": " EWU recent events",
+        " EWU Latest Notices": " EWU latest notices",
+        " EWU Governance": " EWU governance",
+        " EWU International Partnerships": " EWU international partnerships",
+        " EWU Newsletters": " EWU newsletters",
+        " EWU Proctor Schedule": " EWU proctor schedule",
+        " EWU Exam Schedule": " EWU exam schedule",
+        " EWU Academic Calendar": " EWU academic calendar",
+        "Admission Office": "Admission office",
+        "Address": "Thikana",
+        "Phone": "Phone",
+        "Mobile": "Mobile",
+        "Email": "Email",
+        "Website": "Website",
+        "Web": "Web",
+        "Code": "Code",
+        "Title": "Title",
+        "Credits": "Credits",
+        "Prerequisites": "Prerequisites",
+        "Description": "Description",
+        "Program": "Program",
+        "Programs": "Program gulo",
+        "Type": "Type",
+        "Section": "Section",
+        "Total returned": "Mot pawa geche",
+        "Faculty of Science and Engineering": "Faculty of Science and Engineering",
+        "Faculty of Business and Economics": "Faculty of Business and Economics",
+        "Faculty of Arts and Social Sciences": "Faculty of Arts and Social Sciences",
+        "Other Academic Units": "Onnanno academic units",
+        "Undergraduate Programs (Per Credit)": "Undergraduate program gulo (per credit)",
+        "Graduate Programs (Per Credit)": "Graduate program gulo (per credit)",
+        "Undergraduate": "Undergraduate",
+        "Graduate": "Graduate",
+        "Postgraduate": "Postgraduate",
+        "Grade Scale": "Grade scale",
+        "Special Grades": "Special grades",
+        "Eligibility": "Eligibility",
+        "Amount/Waiver": "Amount/Waiver",
+        "Min CGPA": "Min CGPA",
+        "Freedom Fighter's Scholarship": "Freedom Fighter scholarship",
+        "Graduate Scholarships": "Graduate scholarships",
+        "Based on Bachelor's CGPA": "Bachelor's CGPA er upor vitti kore",
+        "Academic": "Academic",
+        "Administrative": "Administrative",
+        "Dept": "Dept",
+        "Purpose": "Purpose",
+        "Deadline": "Deadline",
+        "Test": "Test",
+        "Required Documents": "Required documents",
+        "Bachelor's Degree": "Bachelor's degree",
+        "SSC & HSC GPA": "SSC & HSC GPA",
+        "SSC & HSC": "SSC & HSC",
+        "Diploma": "Diploma",
+        "Expected Behavior": "Expected behavior",
+        "Academic Misconduct (Zero Tolerance)": "Academic misconduct (zero tolerance)",
+        "Social Misconduct": "Social misconduct",
+        "Notable Alumni": "Notable alumni",
+        "Achievement": "Achievement",
+        "Position": "Position",
+        "Country": "Country",
+        "Partnership": "Partnership",
+        "Chairperson": "Chairperson",
+        "Step-by-Step Guide": "Step by step guide",
+        "Application Steps": "Application steps",
+        "Application Fee": "Application fee",
+        "Step": "Step",
+        "Note": "Note",
+        "Tip": "Tip",
+        "Need help?": "Help lagbe?",
+        "Recent": "Recent",
+        "Format": "Format",
+        "Max size": "Max size",
+        "Printed Admit Card": "Printed admit card",
+        "Original": "Original",
+        "Example": "Example",
+        "Save": "Save",
+        "Preview": "Preview",
+        "Submit Form": "Submit form",
+        "No course data found for": "Ei department er kono course data pawa jay ni:",
+        "No": "No",
+        "Yes": "Yes",
+    },
 }
 
 
-def normalize_department_name(dept_name: str) -> str:
-    """Normalize department name to match DEPARTMENT_FILES keys"""
-    
-    if not dept_name:
-        return ""
-    
-    # Convert to lowercase and strip
-    dept = dept_name.lower().strip()
-    
-    # Mapping of variations to standard keys
-    dept_mappings = {
-        # CSE variations
-        "computer science and engineering": "cse",
-        "computer science & engineering": "cse",
-        "computer science": "cse",
-        "comp sci": "cse",
-        "cs": "cse",
-        "cse": "cse",
-        
-        # EEE variations
-        "electrical and electronics engineering": "eee",
-        "electrical & electronics engineering": "eee",
-        "electrical and electronics": "eee",
-        "electrical engineering": "eee",
-        "electrical": "eee",
-        "eee": "eee",
-        "electrical and electronic engineering": "eee",
-        "electrical electronic engineering": "eee",     
-
-        
-        # ECE variations
-        "electronics and communication engineering": "ece",
-        "electronics & communication engineering": "ece",
-        "electronics and communication": "ece",
-        "electronics": "ece",
-        "ece": "ece",
-        
-        # Civil variations
-        "civil engineering": "civil",
-        "civil": "civil",
-        "ce": "civil",
-        
-        # BBA variations
-        "business administration": "bba",
-        "business": "bba",
-        "bba": "bba",
-        "ba": "bba",
-        
-        # Economics
-        "economics": "economics",
-        "eco": "economics",
-        
-        # English
-        "english": "english",
-        "eng": "english",
-        
-        # Pharmacy
-        "pharmacy": "pharmacy",
-        "pharm": "pharmacy",
-        
-        # Law
-        "law": "law",
-        
-        # Math
-        "mathematics": "math",
-        "math": "math",
-        
-        # Sociology
-        "sociology": "sociology",
-        "soc": "sociology",
-        
-        # Graduate
-        "mba": "mba",
-        "emba": "emba",
-        "ms cse": "ms cse",
-        "msc cse": "ms cse",
-        "master of science in cse": "ms cse",
-        "ms data science": "ms dsa",
-        "data science": "ms dsa",
-    }
-    
-    # Return mapped value or original lowercase
-    return dept_mappings.get(dept, dept)
+def _localize_template(text: str, lang: str) -> str:
+    """Best-effort template localization for Bangla/Banglish outputs."""
+    if lang not in ("bangla", "banglish") or not text:
+        return text
+    localized = text
+    replacements = _LOCALIZE_REPLACEMENTS.get(lang, {})
+    for src in sorted(replacements, key=len, reverse=True):
+        localized = localized.replace(src, replacements[src])
+    localized = re.sub(r"\bStep\s+(\d+)\s*:", ("ধাপ \1:" if lang == "bangla" else "Step \1:"), localized)
+    localized = re.sub(r"\bPhone\s*:", ("ফোন:" if lang == "bangla" else "Phone:"), localized)
+    localized = re.sub(r"\bEmail\s*:", ("ইমেইল:" if lang == "bangla" else "Email:"), localized)
+    localized = re.sub(r"\bAddress\s*:", ("ঠিকানা:" if lang == "bangla" else "Thikana:"), localized)
+    localized = re.sub(r"\bWebsite\s*:", ("ওয়েবসাইট:" if lang == "bangla" else "Website:"), localized)
+    localized = re.sub(r"\bDeadline\s*:", ("শেষ তারিখ:" if lang == "bangla" else "Deadline:"), localized)
+    localized = re.sub(r"\bProgram\s*:", ("প্রোগ্রাম:" if lang == "bangla" else "Program:"), localized)
+    localized = re.sub(r"\bDescription\s*:", ("বিবরণ:" if lang == "bangla" else "Description:"), localized)
+    return localized
 
 
-
-from rasa_sdk import Action, Tracker
-from rasa_sdk.executor import CollectingDispatcher
-from typing import Any, Text, Dict, List
-import json
-import requests
-from rasa_sdk.events import UserUtteranceReverted
-from rasa_sdk.events import SlotSet
+def _lang_wrap(text: str, lang: str) -> str:
+    """Wrap a response with language-appropriate prefix/suffix."""
+    text = _localize_template(text, lang)
+    return _LANG_PREFIX.get(lang, "") + text + _LANG_SUFFIX.get(lang, "")
 
 
+def get_user_language(tracker: Tracker) -> str:
+    lang = tracker.get_slot("user_language")
+    if lang in ("bn", "banglish", "en", "bangla", "english"):
+        return {"bn": "bangla", "en": "english"}.get(lang, lang)
+    for e in tracker.latest_message.get("entities", []):
+        if e.get("entity") == "user_language":
+            val = e.get("value", "en")
+            return {"bn": "bangla", "en": "english"}.get(val, val)
+    return detect_language(tracker.latest_message.get("text", ""))
 
 
-
-# ========================================
-# HELPER FUNCTIONS TO LOAD ALL DATA
-# ========================================
-
-BASE_URL = "https://raw.githubusercontent.com/Atkiya/RasaChatbot/main/"
-
-def load_json_file(filename):
+def fetch_api_data(endpoint: str, params: Dict[str, Any] = None) -> Any:
+    """Live API fetch — used only as a fallback when preloaded DATA is missing."""
     try:
-        url = BASE_URL + filename
-        response = requests.get(url)
+        url = f"{API_BASE_URL}/{endpoint}"
+        print(f"\n[API FETCH] GET {url}  params={params}")
+        response = requests.get(url, headers=HEADERS, params=params, timeout=60)
+        print(f"[API FETCH] Status: {response.status_code}")
+        if response.status_code == 200:
+            data = response.json()
+            print(f"[API FETCH] Response preview: {json.dumps(data, ensure_ascii=False)[:500]}")
+            if isinstance(data, dict) and "data" in data:
+                return data["data"]
+            return data
+        else:
+            logger.error(f"Failed to fetch {endpoint}: Status {response.status_code}")
+            return []
+    except Exception as e:
+        logger.error(f"Exception fetching {endpoint}: {e}")
+        return []
+
+
+def fetch_detailed_data(list_endpoint: str, id_field: str, detail_endpoint_prefix: str) -> Dict[str, Any]:
+    print(f"\n[DETAILED FETCH] Starting: {list_endpoint}")
+    items = fetch_api_data(list_endpoint)
+    if not isinstance(items, list):
+        items = [items] if items else []
+    detailed_results = {}
+    for item in items:
+        item_id = item.get(id_field)
+        if item_id:
+            try:
+                detail = fetch_api_data(f"{detail_endpoint_prefix}/{item_id}")
+                detailed_results[str(item_id)] = detail
+            except Exception as e:
+                logger.error(f"Failed detail for {item_id}: {e}")
+    print(f"[DETAILED FETCH] Done: {len(detailed_results)} records for {list_endpoint}")
+    return detailed_results
+
+
+def load_from_github(filename: str) -> Any:
+    """Fetch JSON data from the configured GitHub raw source."""
+    try:
+        url = f"{GITHUB_RAW_BASE}/{filename}"
+        print(f"\n[GITHUB FETCH] GET {url}")
+        response = requests.get(url, timeout=30)
+        print(f"[GITHUB FETCH] Status: {response.status_code}")
         if response.status_code == 200:
             return response.json()
-        else:
-            print(f"ERROR: Failed to fetch {filename}. Status: {response.status_code}")
-            return None
+        logger.error(f"Failed to fetch GitHub file {filename}: Status {response.status_code}")
+        return {}
     except Exception as e:
-        print(f"ERROR loading {filename}: {str(e)}")
-        return None
+        logger.error(f"Exception fetching GitHub file {filename}: {e}")
+        return {}
 
-def load_admission_calendar():
-    return load_json_file("dynamic_admission_calendar.json")
 
-def load_admission_process():
-    return load_json_file("dynamic_admission_process.json")
+def utter_smart(dispatcher: CollectingDispatcher, tracker: Tracker, text: str) -> None:
+    """Dispatch language-aware responses using the existing language wrappers."""
+    lang = get_user_language(tracker)
+    dispatcher.utter_message(text=_lang_wrap(text, lang))
 
-def load_admission_requirements():
-    return load_json_file("dynamic_admission_requirements.json")
 
-def load_tuition_fees():
-    return load_json_file("dynamic_tution_fees.json")
+# ─────────────────────────────────────────────
+# STARTUP DATA LOAD
+# ─────────────────────────────────────────────
 
-def load_events_workshops():
-    return load_json_file("dynamic_events_workshops.json")
+try:
+    print("\n" + "=" * 60)
+    print("LOADING EWU DATA FROM API")
+    print("=" * 60)
+    DATA: Dict[str, Any] = {}
+    _simple_endpoints = {
+        "admission_deadlines": "admission-deadlines",
+        "academic_calendar":   "academic-calendar",
+        "grade_scale":         "grade-scale",
+        "tuition_fees":        "tuition-fees",
+        "scholarships":        "scholarships",
+        "clubs":               "clubs",
+        "notices":             "notices",
+        "partnerships":        "partnerships",
+        "governance":          "governance",
+        "alumni":              "alumni",
+        "helpdesk_db":         "helpdesk",
+        "policies":            "policies",
+        "proctor_schedule":    "proctor-schedule",
+        "newsletters":         "newsletters",
+        "programs":            "programs",
+        "faculty":             "faculty",
+        "departments":         "departments",
+        "documents":           "documents",
+        "events":              "events",
+        "course_programs_ug":  "courses/programs",
+        "courses_all":         "courses",
+    }
+    for key, endpoint in _simple_endpoints.items():
+        DATA[key] = fetch_api_data(endpoint)
+    DATA["admission_process"] = load_from_github(GITHUB_DATA_SOURCES["admission_process"])
+    DATA["static_programs"] = load_from_github(GITHUB_DATA_SOURCES["static_programs"])
+    DATA["facilities"] = load_from_github(GITHUB_DATA_SOURCES["facilities"])
+    DATA["helpdesk_contacts"] = load_from_github(GITHUB_DATA_SOURCES["helpdesk_contacts"])
+    DATA["programs_list"] = DATA["programs"]
+    DATA["faculty_list"]  = DATA["faculty"]
+    DATA["programs_map"]  = fetch_detailed_data("programs",  "id",   "programs")
+    DATA["faculty_map"]   = fetch_detailed_data("faculty",   "id",   "faculty")
+    DATA["documents_map"] = fetch_detailed_data("documents", "slug", "documents")
+    print("\n" + "=" * 60)
+    print("DATA LOADING COMPLETE")
+    print("=" * 60 + "\n")
+except Exception as e:
+    print(f"CRITICAL ERROR loading data: {e}")
+    DATA = {}
 
-def load_faculty():
-    return load_json_file("dynamic_faculty.json")
 
-def load_grading():
-    return load_json_file("dynamic_grading.json")
+# ─────────────────────────────────────────────
+# HELPERS
+# ─────────────────────────────────────────────
 
-def load_facilities():
-    return load_json_file("dynamic_facilites.json")
 
-# ========================================
-# STATIC FILES
-# ========================================
-def load_about_ewu():
-    return load_json_file("static_aboutEWU.json")
+ 
+DEPARTMENT_MAPPING = {
+    "cse": "st_cse", "computer science": "st_cse",
+    "eee": "st_eee", "electrical": "st_eee",
+    "bba": "bba",    "business": "bba",
+    "ce": "st_ce",   "civil": "st_ce",
+    "english": "st_english", "pharmacy": "st_pharmacy",
+    "law": "st_law",
+    "economics": "st_economics", "eco": "st_economics",
+    "sociology": "st_sociology", "soc": "st_sociology",
+}
+ 
+GRADUATE_MAPPING = {
+    "ms cse":       "ms_cse",
+    "ms dsa":       "ms_dsa", "data science": "ms_dsa",
+    "mba":          "mba_emba", "emba": "mba_emba",
+}
+ 
+GRADUATE_PROGRAM_CODES = ["MS-CSE","MS-DSA","MBA","EMBA","MA-ENG","MA-TESOL","LL.M","M.PHARM","MSS-ECO","MDS"]
 
-def load_admin():
-    return load_json_file("static_Admin.json")
 
-def load_all_programs():
-    return load_json_file("static_AllAvailablePrograms.json")
 
-def load_campus_life():
-    return load_json_file("static_campus_life.json")
+def _get_document(slug: str) -> Dict[str, Any]:
+    """
+    Return a document by slug from the preloaded documents_map.
+    Falls back to a live API call only if the map is empty or the slug is missing.
+    """
+    doc = DATA.get("documents_map", {}).get(slug)
+    if doc:
+        return doc
+    logger.warning(f"[_get_document] slug '{slug}' not in preloaded documents_map — fetching live")
+    return fetch_api_data(f"documents/{slug}") or {}
 
-def load_career_counseling():
-    return load_json_file("static_Career_Counseling_Center.json")
 
-def load_clubs():
-    return load_json_file("static_clubs.json")
+def get_course_by_code(course_code: str) -> Dict[str, Any]:
+    """
+    Search for a course by code across all GitHub-backed program data files.
+    Undergraduate: DEPARTMENT_MAPPING values → DATA[key]
+    Graduate:      GRADUATE_MAPPING values   → DATA[key]
+    No API calls made.
+    """
+    course_code = course_code.upper().strip()
+ 
+    # ── Undergraduate ─────────────────────────────────────────────────────────
+    for data_key in DEPARTMENT_MAPPING.values():
+        program_data = DATA.get(data_key)
+        if not program_data or not isinstance(program_data, dict):
+            continue
+ 
+        dept_info    = program_data.get("department_info", {})
+        program_name = dept_info.get("program_name") or dept_info.get("department_name") or ""
+ 
+        # Main course list
+        for course in program_data.get("courses", []):
+            if course.get("code", "").upper() == course_code:
+                return {
+                    "success":       True,
+                    "course_code":   course_code,
+                    "course_title":  course.get("name") or course.get("title", ""),
+                    "credits":       course.get("credits", 0),
+                    "prerequisites": course.get("prerequisites", "None"),
+                    "description":   course.get("description", ""),
+                    "program":       program_name,
+                    "major":         "",
+                    "category":      course.get("category", ""),
+                }
+ 
+        # Major-specific lists — check both field name variants
+        for major_name, major_data in program_data.get("majors", {}).items():
+            core_courses = (
+                major_data.get("required_courses", [])    # BBA
+                + major_data.get("compulsory_courses", []) # other UG files
+            )
+            for course in core_courses:
+                if course.get("code", "").upper() == course_code:
+                    return {
+                        "success":       True,
+                        "course_code":   course_code,
+                        "course_title":  course.get("name") or course.get("title", ""),
+                        "credits":       course.get("credits", 0),
+                        "prerequisites": course.get("prerequisites", "None"),
+                        "description":   course.get("description", ""),
+                        "program":       program_name,
+                        "major":         major_name,
+                        "category":      f"Core - {major_name}",
+                    }
+            for course in major_data.get("elective_courses", []):
+                if course.get("code", "").upper() == course_code:
+                    return {
+                        "success":       True,
+                        "course_code":   course_code,
+                        "course_title":  course.get("name") or course.get("title", ""),
+                        "credits":       course.get("credits", 0),
+                        "prerequisites": course.get("prerequisites", "None"),
+                        "description":   course.get("description", ""),
+                        "program":       program_name,
+                        "major":         major_name,
+                        "category":      f"Elective - {major_name}",
+                    }
+ 
+    # ── Graduate ──────────────────────────────────────────────────────────────
+    for data_key in GRADUATE_MAPPING.values():
+        program_data = DATA.get(data_key)
+        if not program_data or not isinstance(program_data, dict):
+            continue
+        program_name = program_data.get("program", "")
+        for course in program_data.get("courses", []):
+            if course.get("code", "").upper() == course_code:
+                return {
+                    "success":       True,
+                    "course_code":   course_code,
+                    "course_title":  course.get("name") or course.get("title", ""),
+                    "credits":       course.get("credits", 0),
+                    "prerequisites": course.get("prerequisites", "None"),
+                    "description":   course.get("description", ""),
+                    "program":       program_name,
+                    "major":         "",
+                    "category":      course.get("category", ""),
+                }
+ 
+    return {"success": False, "message": f"Course {course_code} not found"}
+ 
 
-def load_departments():
-    return load_json_file("static_depts.json")
 
-def load_facilities_static():
-    return load_json_file("static_facilities.json")
 
-def load_facilities17():
-    return load_json_file("static_facilities17.json")
 
-def load_helpdesk():
-    return load_json_file("static_helpdesk.json")
+# ─────────────────────────────────────────────
+# ACTION CLASSES
+# ─────────────────────────────────────────────
 
-def load_payment_procedure():
-    return load_json_file("static_payment_procedure.json")
+class ActionGetLocation(Action):
+    def name(self): return "action_get_location"
 
-def load_policy():
-    return load_json_file("static_Policy.json")
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
+        logger.info(f"[action_get_location] lang={lang}")
 
-def load_programs():
-    return load_json_file("static_Programs.json")
+        doc = _get_document("about-ewu")
+        if not doc or not isinstance(doc, dict):
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
 
-def load_rules():
-    return load_json_file("static_Rules.json")
+        content = doc.get("content", {})
+        address = content.get("address", {})
+        contact = content.get("contact", {})
+        full_address = (
+            f"{address.get('street_address','')}, {address.get('area','')}, "
+            f"{address.get('city','')} - {address.get('post_code','')}, "
+            f"{address.get('country','')}"
+        )
+        core = (
+            f"Address: {full_address}\n"
+            f" Phone: {contact.get('phone','')}\n"
+            f" Email: {contact.get('email','')}\n"
+            f" Website: {contact.get('website','')}"
+        )
+        dispatcher.utter_message(text=_lang_wrap(" East West University Location:\n\n" + core, lang))
+        return []
 
-def load_scholarships():
-    return load_json_file("static_scholarship_and_financial.json")
 
-def load_sexual_harassment():
-    return load_json_file("static_Sexual_harassment.json")
+class ActionGetSocialMedia(Action):
+    def name(self): return "action_get_social_media"
 
-def load_tuition_fees_static():
-    return load_json_file("static_Tuition_fees.json")
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
+        logger.info(f"[action_get_social_media] lang={lang}")
+        core = (
+            " Website: www.ewubd.edu\n📧 Admissions: admissions@ewubd.edu\n"
+            " Phone: 09666775577, Ext. 234\n\n"
+            " Facebook:  https://www.facebook.com/myewu/\n"
+            "   YouTube:   https://www.youtube.com/EastWestUniversity96\n"
+            "   LinkedIn:  https://www.linkedin.com/school/my-east-west-university/\n"
+            "   Twitter:   https://x.com/myewubd\n"
+            "   Instagram: https://www.instagram.com/myewu96/"
+        )
+        dispatcher.utter_message(text=_lang_wrap(core, lang))
+        return []
 
-# ========================================
-# GRADUATE PROGRAMS
-# ========================================
-def load_ma_english():
-    return load_json_file("ma_english.json")
 
-def load_mba_emba():
-    return load_json_file("mba_emba.json")
+class ActionGetEWUHistory(Action):
+    def name(self): return "action_get_ewu_history"
 
-def load_mds():
-    return load_json_file("mds.json")
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
+        logger.info(f"[action_get_ewu_history] lang={lang}")
 
-def load_mphil_pharmacy():
-    return load_json_file("mphil_pharmacy.json")
+        doc = _get_document("about-ewu")
+        if not doc or not isinstance(doc, dict):
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
 
-def load_mss_economics():
-    return load_json_file("mss_eco.json")
+        history = doc.get("content", {}).get("history", {})
+        if not history:
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
 
-def load_ms_cse():
-    return load_json_file("ms_cse.json")
+        core  = " East West University History:\n\n"
+        core += f" Idea: {history.get('idea','')}\n"
+        core += f" Lead Founder: {history.get('lead_founder','')}\n"
+        core += f" Founded By: {history.get('founding_organization','')}\n"
+        core += f" Legal Basis: {history.get('legal_basis','')}\n\n"
+        core += f" Launch Year: {history.get('launch_year','')}\n"
+        core += f" First Classes: {history.get('first_classes_start_date','')}\n"
+        core += f" Initial Faculty: {history.get('initial_faculty','')}\n"
+        core += f" Initial Students: {history.get('initial_students','')}\n\n"
+        core += f" Current Faculty: {history.get('current_faculty','')}\n"
+        core += f" Current Students: {history.get('current_students','')}\n"
+        core += f" Initial Campus: {history.get('initial_campus_location','')}"
+        dispatcher.utter_message(text=_lang_wrap(core, lang))
+        return []
 
-def load_ms_dsa():
-    return load_json_file("ms_dsa.json")
 
-def load_tesol():
-    return load_json_file("tesol.json")
+class ActionGetEWUVision(Action):
+    def name(self): return "action_get_ewu_vision"
 
-# ========================================
-# UNDERGRADUATE PROGRAMS
-# ========================================
-def load_st_ba():
-    return load_json_file("st_ba.json")
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
 
-def load_st_ce():
-    return load_json_file("st_ce.json")
+        doc = _get_document("about-ewu")
+        if not doc or not isinstance(doc, dict):
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
 
-def load_st_cse():
-    return load_json_file("st_cse.json")
+        vision_list = doc.get("content", {}).get("vision", [])
+        if not vision_list:
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
 
-def load_st_ece():
-    return load_json_file("st_ece.json")
+        core = " East West University Vision:\n\n" + "".join(f"• {p}\n\n" for p in vision_list)
+        dispatcher.utter_message(text=_lang_wrap(core.strip(), lang))
+        return []
 
-def load_st_economics():
-    return load_json_file("st_economics.json")
 
-def load_st_eee():
-    return load_json_file("st_eee.json")
+class ActionGetEWUMission(Action):
+    def name(self): return "action_get_ewu_mission"
 
-def load_st_english():
-    return load_json_file("st_english.json")
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
 
-def load_st_geb():
-    return load_json_file("st_geb.json")
+        doc = _get_document("about-ewu")
+        if not doc or not isinstance(doc, dict):
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
 
-def load_st_information_studies():
-    return load_json_file("st_information_studies.json")
+        mission_list = doc.get("content", {}).get("mission", [])
+        if not mission_list:
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
 
-def load_st_law():
-    return load_json_file("st_law.json")
+        core = " East West University Mission:\n\n" + "".join(
+            f"{i}. {p}\n\n" for i, p in enumerate(mission_list, 1)
+        )
+        dispatcher.utter_message(text=_lang_wrap(core.strip(), lang))
+        return []
 
-def load_st_math():
-    return load_json_file("st_math.json")
 
-def load_st_pharmacy():
-    return load_json_file("st_pharmacy.json")
+class ActionListDepartments(Action):
+    def name(self): return "action_list_departments"
 
-def load_st_social_relations():
-    return load_json_file("st_social_relations.json")
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
 
-def load_st_sociology():
-    return load_json_file("st_sociology.json")
+        departments = DATA.get("departments") or fetch_api_data("departments")
+        if not departments:
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
 
-# ========================================
-# HELPER FUNCTION TO LOAD ALL FILES
-# ========================================
-def load_all_knowledge_base():
-    """Load all JSON files at once into a dictionary"""
-    return {
-        # Dynamic files
-        "admission_calendar": load_admission_calendar(),
-        "admission_process": load_admission_process(),
-        "admission_requirements": load_admission_requirements(),
-        "tuition_fees": load_tuition_fees(),
-        "events_workshops": load_events_workshops(),
-        "faculty": load_faculty(),
-        "grading": load_grading(),
-        "facilities": load_facilities(),
+        seen: Dict[str, Dict] = {}
+        for dept in departments:
+            key = f"{dept.get('faculty','')}||{dept.get('name','')}"
+            if key not in seen or dept.get("code"):
+                seen[key] = dept
+
+        grouped: Dict[str, List] = {}
+        for dept in seen.values():
+            grouped.setdefault(dept.get("faculty", "Other"), []).append(dept)
+
+        message = " East West University Departments:\n\n"
+        faculty_order = [
+            "Faculty of Science and Engineering",
+            "Faculty of Business and Economics",
+            "Faculty of Arts and Social Sciences",
+            "Other Academic Units",
+        ]
+
+        def _fmt(d):
+            code = d.get("code") or ""
+            name = d.get("name", "Unknown")
+            return f"   • {name} ({code.upper()})\n" if code else f"   • {name}\n"
+
+        for fac in faculty_order:
+            if fac in grouped:
+                message += f" {fac}:\n" + "".join(_fmt(d) for d in grouped[fac]) + "\n"
+        for fac, depts in grouped.items():
+            if fac not in faculty_order:
+                message += f" {fac}:\n" + "".join(_fmt(d) for d in depts) + "\n"
+
+        dispatcher.utter_message(text=_lang_wrap(message.strip(), lang))
+        return []
+
         
-        # Static files
-        "about_ewu": load_about_ewu(),
-        "admin": load_admin(),
-        "all_programs": load_all_programs(),
-        "campus_life": load_campus_life(),
-        "career_counseling": load_career_counseling(),
-        "clubs": load_clubs(),
-        "departments": load_departments(),
-        "facilities_static": load_facilities_static(),
-        "facilities17": load_facilities17(),
-        "helpdesk": load_helpdesk(),
-        "payment_procedure": load_payment_procedure(),
-        "policy": load_policy(),
-        "programs": load_programs(),
-        "rules": load_rules(),
-        "scholarships": load_scholarships(),
-        "sexual_harassment": load_sexual_harassment(),
-        "tuition_fees_static": load_tuition_fees_static(),
+GITHUB_COURSE_PROGRAM_MAP = {
+    # Undergraduate
+    "bba":                    "bba",
+    "business administration": "bba",
+    "ba english":             "st_ba",
+    "ba in english":          "st_ba",
+    # Graduate
+    "ms cse":                 "ms_cse",
+    "msc cse":                "ms_cse",
+    "ms computer":            "ms_cse",
+    "master of science in computer": "ms_cse",
+    "ms dsa":                 "ms_dsa",
+    "ms data":                "ms_dsa",
+    "data science":           "ms_dsa",
+    "mba":                    "mba_emba",
+    "emba":                   "mba_emba",
+    "executive mba":          "mba_emba",
+    "ma english":             "ma_english",
+    "tesol":                  "tesol",          # ← CHANGE (was "ma_english")
+    "teaching english":       "tesol",          # ← ADD
+    "ma tesol":               "tesol",
+    "ma in english":          "ma_english",
+    "tesol":                  "ma_english",
+    "mds":                    "mds",
+    "development studies":    "mds",
+    "mphil":                  "mphil_pharmacy",
+    "m pharm":                "mphil_pharmacy",
+    "mss eco":                "mss_eco",
+    "mss economics":          "mss_eco",
+    "master of social science": "mss_eco",
+}
+
+ 
+_github_course_files = [
+    # Graduate
+    "ma_english", "tesol", "mba_emba", "ms_cse", "ms_dsa",
+    "mds", "mphil_pharmacy", "mss_eco",
+    # Undergraduate
+    "bba", "st_ba",
+    "st_cse", "st_eee", "st_ce",
+    "st_english", "st_pharmacy", "st_law",
+    "st_economics", "st_sociology",
+]
+for _key in _github_course_files:
+    _loaded = load_from_github(GITHUB_DATA_SOURCES.get(_key, f"{_key}.json"))
+    DATA[f"gh_courses_{_key}"] = _loaded   
+    DATA[_key]                 = _loaded 
+
+
+
+# ─────────────────────────────────────────────
+# GITHUB COURSE HELPERS
+# ─────────────────────────────────────────────
+
+def _normalize_course_list(raw: List) -> List[Dict]:
+    """Normalize varied field names into a consistent course dict."""
+    normalized = []
+    for c in raw:
+        if not isinstance(c, dict):
+            continue
+        code    = (c.get("course_code") or c.get("code") or c.get("course") or "").strip()
+        title   = (c.get("course_title") or c.get("title") or c.get("name") or "").strip()
+        credits = c.get("credits") or c.get("credit") or c.get("credit_hours") or "?"
+
+        # Handle "CSE503 Data Structures" packed into a single "course" string
+        if not title and code and not code[:3].isdigit():
+            parts = code.split(" ", 2)
+            if len(parts) >= 2 and parts[0][-1].isdigit():
+                code  = parts[0]
+                title = " ".join(parts[1:])
+
+        if code or title:
+            normalized.append({
+                "course_code":  code  or "N/A",
+                "course_title": title or "N/A",
+                "credits":      credits,
+            })
+    return normalized
+
+
+def _extract_courses_from_github(data: Any, program_label: str = "") -> List[Dict]:
+    """
+    Accepts any common JSON shape and returns a flat normalized course list.
+    Handles:
+      - top-level list
+      - {"courses": [...]}
+      - {"core_courses": [...], "elective_courses": [...], ...}
+      - one level deeper: {"track": {"courses": [...]}}
+    """
+    if not data:
+        return []
+
+    # Shape 1: bare list
+    if isinstance(data, list):
+        return _normalize_course_list(data)
+
+    if not isinstance(data, dict):
+        return []
+
+    # Shape 2: {"courses": [...]}
+    if "courses" in data and isinstance(data["courses"], list):
+        return _normalize_course_list(data["courses"])
+
+    # Shape 3: multiple section keys at top level
+    collected = []
+    for val in data.values():
+        if isinstance(val, list):
+            collected.extend(_normalize_course_list(val))
+        elif isinstance(val, dict):
+            inner = val.get("courses") or val.get("course_list") or []
+            if isinstance(inner, list):
+                collected.extend(_normalize_course_list(inner))
+            else:
+                for v2 in val.values():
+                    if isinstance(v2, list):
+                        collected.extend(_normalize_course_list(v2))
+
+    # Deduplicate by course_code
+    seen = set()
+    unique = []
+    for c in collected:
+        key = c["course_code"]
+        if key not in seen:
+            seen.add(key)
+            unique.append(c)
+    return unique
+
+class ActionGetCourses(Action):
+    def name(self): return "action_get_courses"
+ 
+    def run(self, dispatcher, tracker, domain):
+        lang        = get_user_language(tracker)
+        user_message = tracker.latest_message.get("text", "")
+        user_lower  = user_message.lower()
+ 
+        # ── 1. Specific course-code lookup ────────────────────────────────────
+        matches = re.findall(r'\b([A-Z]{2,4}\s*\d{3,4})\b', user_message.upper())
+        if matches:
+            result = get_course_by_code(matches[0].replace(" ", ""))
+            if result["success"]:
+                msg  = " Course Information:\n\n"
+                msg += f"Code:          {result['course_code']}\n"
+                msg += f"Title:         {result['course_title']}\n"
+                msg += f"Credits:       {result['credits']}\n"
+                msg += f"Prerequisites: {result['prerequisites']}\n"
+                if result.get("category"): msg += f"Category:      {result['category']}\n"
+                if result.get("major"):    msg += f"Major:         {result['major']}\n"
+                if result["description"]:  msg += f"\nDescription: {result['description'][:300]}..."
+                msg += f"\n\nProgram: {result.get('program', 'N/A')}"
+            else:
+                msg = f" {result.get('message', 'Course not found')}. Please check the course code."
+            dispatcher.utter_message(text=_lang_wrap(msg, lang))
+            return []
+ 
+        # ── 2. Graduate program check — MUST run before UG keyword check ──────
+        #    Longest phrases first prevents "mba" matching inside "emba", etc.
+        gh_key = None
+        for phrase in sorted(GITHUB_COURSE_PROGRAM_MAP, key=len, reverse=True):
+            if phrase in user_lower:
+                gh_key = GITHUB_COURSE_PROGRAM_MAP[phrase]
+                break
+ 
+        if gh_key:
+            raw_gh  = DATA.get(f"gh_courses_{gh_key}") or load_from_github(
+                GITHUB_DATA_SOURCES.get(gh_key, f"{gh_key}.json")
+            )
+            courses = _extract_courses_from_github(raw_gh, gh_key)
+            label   = gh_key.upper().replace("_", " ")
+ 
+            if not courses:
+                dispatcher.utter_message(
+                    text=_lang_wrap(
+                        f"Course details for {label} are not yet available. "
+                        "Contact admissions@ewubd.edu or visit https://www.ewubd.edu.",
+                        lang,
+                    )
+                )
+            else:
+                msg  = f" Courses — {label}:\n\nTotal: {len(courses)}\n\n"
+                msg += "".join(
+                    f"  {c['course_code']}: {c['course_title']} ({c['credits']} cr)\n"
+                    for c in courses
+                )
+                dispatcher.utter_message(text=_lang_wrap(msg, lang))
+            return []
+ 
+        # ── 3. Undergraduate department keyword ───────────────────────────────
+        department = None
+        for dept_alias in DEPARTMENT_MAPPING:
+            if dept_alias in user_lower:
+                department = dept_alias
+                break
+ 
+        if not department:
+            slot_val = tracker.get_slot("department")
+            if slot_val and slot_val.lower() in DEPARTMENT_MAPPING:
+                department = slot_val.lower()
+ 
+        # ── 4. No department — show all-program overview ──────────────────────
+        if not department:
+            msg       = " All Available Courses:\n\n"
+            total_shown = 0
+            seen_keys = set()
+            for dept_alias, dept_key in DEPARTMENT_MAPPING.items():
+                if dept_key in seen_keys:
+                    continue
+                seen_keys.add(dept_key)
+                program_data = DATA.get(dept_key, {})
+                if not isinstance(program_data, dict):
+                    continue
+                courses = program_data.get("courses", [])
+                if not courses:
+                    continue
+                dept_info    = program_data.get("department_info", {})
+                program_name = (
+                    dept_info.get("program_name")
+                    or dept_info.get("department_name")
+                    or dept_alias.upper()
+                )
+                msg += f"🔹 {program_name}:\n"
+                for course in courses:
+                    msg += f"   {course.get('code','N/A')}: {course.get('name','N/A')} ({course.get('credits','?')} cr)\n"
+               
+                total_shown += 1
+ 
+            if total_shown == 0:
+                msg = (
+                    " No course data is currently available.\n\n"
+                    "Departments: CSE, EEE, BBA, Civil, English, Law, Pharmacy, Economics, Sociology\n\n"
+                    "Example: 'Show me CSE courses' or 'Tell me about BUS101'"
+                )
+            dispatcher.utter_message(text=_lang_wrap(msg, lang))
+            return []
+ 
+        # ── 5. Show courses for the detected UG department ────────────────────
+        dept_key     = DEPARTMENT_MAPPING[department]
+        program_data = DATA.get(dept_key, {})
+ 
+        if not isinstance(program_data, dict) or not program_data:
+            dispatcher.utter_message(
+                text=_lang_wrap(f"No course data found for {department.upper()}.", lang)
+            )
+            return [SlotSet("department", department)]
+ 
+        courses = program_data.get("courses", [])
+ 
+        # Count major courses — handle both required_courses (BBA) and compulsory_courses
+        major_courses = 0
+        for major_data in program_data.get("majors", {}).values():
+            major_courses += len(major_data.get("required_courses", []))
+            major_courses += len(major_data.get("compulsory_courses", []))
+            major_courses += len(major_data.get("elective_courses", []))
+ 
+        dept_info    = program_data.get("department_info", {})
+        program_name = (
+            dept_info.get("program_name")
+            or dept_info.get("department_name")
+            or department.upper()
+        )
+ 
+        msg  = f" {program_name}\n\n"
+        msg += f"Total Courses: {len(courses) + major_courses}\n\n"
+        msg += "Sample Courses:\n"
+        for i, course in enumerate(courses, start=1):
+            msg += f"{i}. {course.get('code','N/A')}: {course.get('name','N/A')} ({course.get('credits','?')} cr)\n"
+       
+        msg += "\n\n💡 Ask about a specific course: 'What is BUS101?'"
+ 
+        dispatcher.utter_message(text=_lang_wrap(msg, lang))
+        return [SlotSet("department", department)]
         
-        # Graduate programs
-        "ma_english": load_ma_english(),
-        "mba_emba": load_mba_emba(),
-        "mds": load_mds(),
-        "mphil_pharmacy": load_mphil_pharmacy(),
-        "mss_economics": load_mss_economics(),
-        "ms_cse": load_ms_cse(),
-        "ms_dsa": load_ms_dsa(),
-        "tesol": load_tesol(),
         
-        # Undergraduate programs
-        "st_ba": load_st_ba(),
-        "st_ce": load_st_ce(),
-        "st_cse": load_st_cse(),
-        "st_ece": load_st_ece(),
-        "st_economics": load_st_economics(),
-        "st_eee": load_st_eee(),
-        "st_english": load_st_english(),
-        "st_geb": load_st_geb(),
-        "st_information_studies": load_st_information_studies(),
-        "st_law": load_st_law(),
-        "st_math": load_st_math(),
-        "st_pharmacy": load_st_pharmacy(),
-        "st_social_relations": load_st_social_relations(),
-        "st_sociology": load_st_sociology(),
+
+class ActionGetCourseDetails(Action):
+    def name(self): return "action_get_course_details"
+
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
+        course_code  = tracker.get_slot("course_code")
+        user_message = tracker.latest_message.get("text", "")
+
+        if not course_code:
+            matches = re.findall(r'\b([A-Z]{2,4}\s*\d{3,4})\b', user_message.upper())
+            if matches:
+                course_code = matches[0].replace(" ", "")
+
+        if not course_code:
+            dispatcher.utter_message(
+                text=_lang_wrap("Please specify a course code, e.g. CSE303 or ENG101.", lang)
+            )
+            return []
+
+        result = get_course_by_code(course_code.upper())
+        if result["success"]:
+            msg = (
+                f" {result['course_code']}: {result['course_title']}\n\n"
+                f"Credits:       {result['credits']}\n"
+                f"Prerequisites: {result['prerequisites']}\n"
+            )
+            if result.get("course_type"):
+                msg += f"Type:          {result['course_type']}\n"
+            if result.get("section"):
+                msg += f"Section:       {result['section']}\n"
+            if result.get("program"):
+                msg += f"Program:       {result['program']}\n"
+            if result["description"]:
+                msg += f"\nDescription:\n{result['description'][:400]}"
+        else:
+            msg = f" {result.get('message', 'Course not found')}"
+
+        dispatcher.utter_message(text=_lang_wrap(msg, lang))
+        return []
+
+
+class ActionGetPrograms(Action):
+    def name(self): return "action_get_programs"
+
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
+
+        programs = DATA.get("programs") or fetch_api_data("programs")
+        if not programs:
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
+
+        grouped: Dict[str, List[str]] = {}
+        for p in programs:
+            grouped.setdefault(p.get("degree_type", "Other"), []).append(p.get("name", "Unknown Program"))
+
+        icons = {"Undergraduate": "", "Postgraduate": "", "Graduate": ""}
+        message = " East West University Programs:\n\n"
+        for dtype, names in grouped.items():
+            message += f"{icons.get(dtype,'📖')} {dtype}:\n"
+            message += "".join(f"   • {n}\n" for n in names) + "\n"
+
+        dispatcher.utter_message(text=_lang_wrap(message.strip(), lang))
+        return []
+
+
+class ActionGetGradingSystem(Action):
+    def name(self): return "action_get_grading_system"
+
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
+
+        raw = DATA.get("grade_scale") or fetch_api_data("grade-scale")
+        if not isinstance(raw, list) or not raw:
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
+
+        regular = [g for g in raw if not g.get("is_special", False)]
+        special  = [g for g in raw if g.get("is_special", False)]
+
+        message = " EWU Grading System\n\nGrade Scale:\n"
+        for g in regular:
+            try:
+                message += f"  {g.get('letter_grade',''):<3} {float(g.get('grade_point',0)):.2f}  ({g.get('numerical_score','')})\n"
+            except Exception:
+                message += f"  {g.get('letter_grade',''):<3} {g.get('grade_point','')}  ({g.get('numerical_score','')})\n"
+
+        if special:
+            message += "\nSpecial Grades:\n"
+            for g in special:
+                message += f"  {g.get('letter_grade','')}: {g.get('description','')}\n"
+                if g.get("note"):
+                    message += f"    ℹ️ {g.get('note')}\n"
+
+        dispatcher.utter_message(text=_lang_wrap(message, lang))
+        return []
+
+
+class ActionGetTuitionFees(Action):
+    def name(self):
+        return "action_get_tuition_fees"
+
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
+
+        fees_list = DATA.get("tuition_fees") or fetch_api_data("tuition-fees")
+        if not isinstance(fees_list, list) or not fees_list:
+            dispatcher.utter_message(
+                text=_lang_wrap(
+                    "Tuition fee data unavailable right now. "
+                    "Visit https://www.ewubd.edu or contact accounts@ewubd.edu.",
+                    lang,
+                )
+            )
+            return []
+
+        def _fmt(val):
+            try:
+                return f"{int(float(val)):,}"
+            except Exception:
+                return str(val) if val is not None else "N/A"
+
+        def _fee_row(p):
+            currency = p.get("currency", "BDT")
+            row  = f"\n   {p.get('program', 'N/A')}\n"
+            row += f"     Total Credits          : {p.get('credits', 'N/A')}\n"
+            row += f"     Per Credit Fee         : {_fmt(p.get('fee_per_credit'))} {currency}\n"
+            row += f"     Tuition Fees           : {_fmt(p.get('total_tuition'))} {currency}\n"
+            row += f"     Library/Lab/Activities : {_fmt(p.get('library_lab_fees'))} {currency}\n"
+            row += f"     Admission Fee          : {_fmt(p.get('admission_fee'))} {currency}\n"
+            row += f"     ──────────────────────────────────\n"
+            row += f"      GRAND TOTAL         : {_fmt(p.get('grand_total'))} {currency}\n"
+            return row
+
+        ug_rows   = [r for r in fees_list if r.get("level", "").lower() == "undergraduate"]
+        grad_rows = [r for r in fees_list if r.get("level", "").lower() in ("graduate", "postgraduate")]
+
+        msg = " EWU Tuition Fees — All Programs:\n"
+
+        if ug_rows:
+            msg += "\n Undergraduate Programs (Per Credit):\n"
+            for row in ug_rows:
+                msg += _fee_row(row)
+
+        if grad_rows:
+            msg += "\n Graduate Programs (Per Credit):\n"
+            for row in grad_rows:
+                msg += _fee_row(row)
+
+        dispatcher.utter_message(text=_lang_wrap(msg, lang))
+        return []
+
+class ActionGetScholarships(Action):
+    def name(self): return "action_get_scholarships"
+
+    _GITHUB_FILE = "scholarships_and_financial_aids.json"
+
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
+
+        raw = load_from_github(self._GITHUB_FILE)
+        if not raw or not isinstance(raw, dict):
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
+
+        msg = "EWU Scholarships & Financial Assistance\n\n"
+
+        # ── Merit Scholarships ────────────────────────────────────────────────
+        merit = raw.get("merit_scholarships", {})
+        if merit:
+            msg += " Merit Scholarships:\n"
+            for key, details in merit.items():
+                if not isinstance(details, dict):
+                    continue
+                title = key.replace("_", " ").title()
+                msg += f"\n  • {title}\n"
+                for field in ("scholarship", "duration", "eligibility", "minimum_score"):
+                    val = details.get(field)
+                    if val:
+                        msg += f"    {field.replace('_',' ').title()}: {val}\n"
+            msg += "\n"
+
+        # ── Financial Assistance ──────────────────────────────────────────────
+        fa = raw.get("financial_assistance", {})
+        if fa:
+            msg += "Financial Assistance:\n"
+            for key, details in fa.items():
+                if not isinstance(details, dict):
+                    continue
+                title = key.replace("_", " ").title()
+                msg += f"\n  • {title}\n"
+                for field in ("quota", "scholarship", "minimum_cgpa", "benefit", "eligibility"):
+                    val = details.get(field)
+                    if val:
+                        msg += f"    {field.replace('_',' ').title()}: {val}\n"
+            msg += "\n"
+
+        # ── Graduate Scholarship Slabs ────────────────────────────────────────
+        grad_req = raw.get("graduate_scholarship_requirements", {})
+        slabs = grad_req.get("scholarships", [])
+        if slabs:
+            msg += "Graduate Scholarships (Based on Bachelor's CGPA):\n"
+            for s in slabs:
+                msg += f"  • CGPA {s.get('bachelor_cgpa','N/A')}: {s.get('scholarship_percentage','N/A')} tuition waiver\n"
+            msg += "\n"
+
+        # ── Scholarship Types ─────────────────────────────────────────────────
+        types = raw.get("scholarship_types", [])
+        if types:
+            msg += "Scholarship Types:\n"
+            for t in types:
+                msg += f"  • {t}\n"
+            msg += "\n"
+
+        # ── Overview numbers ──────────────────────────────────────────────────
+        overview = raw.get("overview", {})
+        if overview:
+            msg += (
+                f"Overview:\n"
+                f"  • Students benefiting: {overview.get('percentage_of_students_benefiting','N/A')}\n"
+                f"  • Earnings distributed as scholarship: {overview.get('percentage_of_earnings_distributed','N/A')}\n\n"
+            )
+
+        msg += " Contact: admissions@ewubd.edu |  09666775577"
+
+        dispatcher.utter_message(text=_lang_wrap(msg, lang))
+        return []
+
+class ActionGetHelpdeskContacts(Action):
+    """
+    Loads helpdesk contact data from the GitHub-backed helpdesk_contacts.json,
+    which has the structure:
+    {
+      "institution": { ... },
+      "department_helpdesks": {
+        "academic_departments": {
+          "<key>": { "department": "CE", "full_name": "...", "email": "..." },
+          ...
+        },
+        "administrative_offices": {
+          "<key>": { "office": "Registrar", "email": "...", "purpose": "..." },
+          ...
+        }
+      },
+      "contact_guidelines": { ... }
     }
 
-
-# ========================================
-# TUITION FEES (UNDERGRADUATE) ACTIONS
-# ========================================
-
-class ActionGetTuitionGeneral(Action):
-    def name(self) -> Text:
-        return "action_tuition_general"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            dispatcher.utter_message(text="Sorry, I couldn't retrieve tuition information at this time.")
-            return []
-        
-        message = "**East West University Tuition Fees (Per Credit)**\n\n"
-        for program in data['undergraduate_programs']['tuition_fees_per_credit']:
-            message += f"- {program['program']}: {program['fee_per_credit']:,} BDT/credit\n"
-        
-        message += f"\n*Applicable from: {data['page_info']['applicable_from']}*"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetApplicationFee(Action):
-    def name(self) -> Text:
-        return "action_application_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            dispatcher.utter_message(text="Sorry, I couldn't retrieve fee information at this time.")
-            return []
-        
-        app_fee = data['fee_categories']['application_fee']
-        message = f"The application fee at East West University is **{app_fee}** (online processing fee, non-refundable)."
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionCSE(Action):
-    def name(self) -> Text:
-        return "action_tuition_cse"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'CSE' in p['program']), None)
-        if prog:
-            message = (f"**B.Sc. in Computer Science & Engineering (CSE)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-        else:
-            message = "CSE tuition information not available."
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionBBA(Action):
-    def name(self) -> Text:
-        return "action_tuition_bba"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if p['program'] == 'BBA'), None)
-        if prog:
-            message = (f"**BBA (Bachelor of Business Administration)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-        else:
-            message = "BBA tuition information not available."
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionEconomics(Action):
-    def name(self) -> Text:
-        return "action_tuition_economics"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'Economics' in p['program']), None)
-        if prog:
-            message = (f"**BSS in Economics**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionEnglish(Action):
-    def name(self) -> Text:
-        return "action_tuition_english"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'English' in p['program']), None)
-        if prog:
-            message = (f"**BA in English**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionLaw(Action):
-    def name(self) -> Text:
-        return "action_tuition_law"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'LL.B' in p['program']), None)
-        if prog:
-            message = (f"**LL.B (Honours)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionSociology(Action):
-    def name(self) -> Text:
-        return "action_tuition_sociology"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'Sociology' in p['program']), None)
-        if prog:
-            message = (f"**BSS in Sociology**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionInformationStudies(Action):
-    def name(self) -> Text:
-        return "action_tuition_information_studies"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'Information Studies' in p['program']), None)
-        if prog:
-            message = (f"**BSS in Information Studies**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionICE(Action):
-    def name(self) -> Text:
-        return "action_tuition_ice"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'ICE' in p['program'] or 'Communication' in p['program']), None)
-        if prog:
-            message = (f"**B.Sc. in Information & Communication Engineering (ICE)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionEEE(Action):
-    def name(self) -> Text:
-        return "action_tuition_eee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'EEE' in p['program']), None)
-        if prog:
-            message = (f"**B.Sc. in Electrical & Electronic Engineering (EEE)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionPharmacy(Action):
-    def name(self) -> Text:
-        return "action_tuition_pharmacy"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'Pharm' in p['program']), None)
-        if prog:
-            message = (f"**Bachelor of Pharmacy (B.Pharm)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionGEB(Action):
-    def name(self) -> Text:
-        return "action_tuition_geb"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'GEB' in p['program'] or 'Genetic' in p['program']), None)
-        if prog:
-            message = (f"**B.Sc. in Genetic Engineering & Biotechnology (GEB)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionCivil(Action):
-    def name(self) -> Text:
-        return "action_tuition_civil"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'Civil' in p['program']), None)
-        if prog:
-            message = (f"**B.Sc. in Civil Engineering**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionPPHS(Action):
-    def name(self) -> Text:
-        return "action_tuition_pphs"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'PPHS' in p['program'] or 'Public Health' in p['program']), None)
-        if prog:
-            message = (f"**BSS in Population & Public Health Sciences (PPHS)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionMath(Action):
-    def name(self) -> Text:
-        return "action_tuition_math"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'Mathematics' in p['program']), None)
-        if prog:
-            message = (f"**B.Sc. in Mathematics**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionDataScience(Action):
-    def name(self) -> Text:
-        return "action_tuition_data_science"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'Data Science' in p['program']), None)
-        if prog:
-            message = (f"**B.Sc. in Data Science & Analytics**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionGetTuitionSocialRelations(Action):
-    def name(self) -> Text:
-        return "action_tuition_social_relations"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_programs']['detailed_fee_structure']
-                    if 'Social Relations' in p['program']), None)
-        if prog:
-            message = (f"**BSS in Social Relations**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-    
-# ========================================
-# MISSING TUITION FEES (GRADUATE) ACTIONS
-# ========================================
-
-class ActionMSDataScienceFee(Action):
-    def name(self) -> Text:
-        return "action_ms_data_science_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        prog = next((p for p in data['graduate_programs']['detailed_fee_structure']
-                    if 'Data Science' in p['program'] and 'Analytics' in p['program']), None)
-        if prog:
-            message = (f"**M.S. in Data Science and Analytics**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-# ========================================
-# MISSING GRADUATE PROGRAM ACTIONS
-# ========================================
-
-class ActionMAEnglishExtendedFee(Action):
-    def name(self) -> Text:
-        return "action_ma_english_extended_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        prog = next((p for p in data['graduate_programs']['detailed_fee_structure']
-                    if p['program'] == 'MA in English (Extended)'), None)
-        if prog:
-            message = (f"**MA in English (Extended - 45 Credits)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionMATESOL42Fee(Action):
-    def name(self) -> Text:
-        return "action_ma_tesol_42_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        prog = next((p for p in data['graduate_programs']['detailed_fee_structure']
-                    if p['program'] == 'MA in TESOL' and p['credits'] == 42), None)
-        if prog:
-            message = (f"**MA in TESOL (42 Credits)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionMATESOL48Fee(Action):
-    def name(self) -> Text:
-        return "action_ma_tesol_48_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        prog = next((p for p in data['graduate_programs']['detailed_fee_structure']
-                    if p['program'] == 'MA in TESOL' and p['credits'] == 48), None)
-        if prog:
-            message = (f"**MA in TESOL (48 Credits)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionMATESOL40Fee(Action):
-    def name(self) -> Text:
-        return "action_ma_tesol_40_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        prog = next((p for p in data['graduate_programs']['detailed_fee_structure']
-                    if p['program'] == 'MA in TESOL' and p['credits'] == 40), None)
-        if prog:
-            message = (f"**MA in TESOL (40 Credits)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionMAEnglishExtendedFee(Action):
-    def name(self) -> Text:
-        return "action_ma_english_extended_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        prog = next((p for p in data['graduate_programs']['detailed_fee_structure']
-                    if p['program'] == 'MA in English (Extended)'), None)
-        if prog:
-            message = (f"**MA in English (Extended - 45 Credits)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionMATESOL40Fee(Action):
-    def name(self) -> Text:
-        return "action_ma_tesol_40_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        prog = next((p for p in data['graduate_programs']['detailed_fee_structure']
-                    if p['program'] == 'MA in TESOL' and p['credits'] == 40), None)
-        if prog:
-            message = (f"**MA in TESOL (40 Credits)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionMATESOL42Fee(Action):
-    def name(self) -> Text:
-        return "action_ma_tesol_42_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        prog = next((p for p in data['graduate_programs']['detailed_fee_structure']
-                    if p['program'] == 'MA in TESOL' and p['credits'] == 42), None)
-        if prog:
-            message = (f"**MA in TESOL (42 Credits)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionMATESOL48Fee(Action):
-    def name(self) -> Text:
-        return "action_ma_tesol_48_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        prog = next((p for p in data['graduate_programs']['detailed_fee_structure']
-                    if p['program'] == 'MA in TESOL' and p['credits'] == 48), None)
-        if prog:
-            message = (f"**MA in TESOL (48 Credits)**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-# ========================================
-# DIPLOMA PROGRAMS ACTIONS
-# ========================================
-
-class ActionPPDMDiplomaFee(Action):
-    def name(self) -> Text:
-        return "action_ppdm_diploma_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        prog = next((p for p in data['diploma_programs']['detailed_fee_structure']
-                    if 'PPDM' in p['program'] or 'Disaster Management' in p['program']), None)
-        if prog:
-            message = (f"**{prog['program']}**\n\n"
-                      f" **Tuition Fee:** {prog['tuition_fees']:,} BDT\n"
-                      f" **Total Credits:** {prog['credits']}\n"
-                      f" **Total Program Cost:** {prog['grand_total']:,} BDT")
-            dispatcher.utter_message(text=message)
-        return []
-
-# ========================================
-# COMPREHENSIVE TUITION BREAKDOWN (ALL PROGRAMS)
-# ========================================
-
-class ActionCompleteTuitionStructure(Action):
-    def name(self) -> Text:
-        return "action_complete_tuition_structure"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_tuition_fees()
-        if not data:
-            return []
-        
-        message = "**Complete Tuition Fee Structure at EWU**\n\n"
-        message += "**UNDERGRADUATE PROGRAMS** (15 programs)\n"
-        for prog in data['undergraduate_programs']['detailed_fee_structure']:
-            message += f"- {prog['program']}: {prog['grand_total']:,} BDT (Total)\n"
-        
-        message += "\n**GRADUATE PROGRAMS** (13 programs)\n"
-        for prog in data['graduate_programs']['detailed_fee_structure']:
-            message += f"- {prog['program']}: {prog['grand_total']:,} BDT (Total)\n"
-        
-        message += "\n**DIPLOMA PROGRAMS** (1 program)\n"
-        for prog in data['diploma_programs']['detailed_fee_structure']:
-            message += f"- {prog['program']}: {prog['grand_total']:,} BDT (Total)\n"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-# ========================================
-# TUITION FEES (GRADUATE) ACTIONS
-# ========================================
-
-class ActionMBAFee(Action):
-    def name(self) -> Text:
-        return "action_mba_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**MBA Program Fee**\n\nFor detailed MBA tuition information, please contact the admissions office at admissions@ewubd.edu or call 09666775577.")
-        return []
-
-class ActionEMBAFee(Action):
-    def name(self) -> Text:
-        return "action_emba_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**Executive MBA (EMBA) Program Fee**\n\nFor detailed EMBA tuition information, please contact the admissions office at admissions@ewubd.edu or call 09666775577.")
-        return []
-
-class ActionMDSFee(Action):
-    def name(self) -> Text:
-        return "action_mds_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**Master in Development Studies (MDS) Program Fee**\n\nFor detailed MDS tuition information, please contact admissions.")
-        return []
-
-class ActionMSSEconomicsFee(Action):
-    def name(self) -> Text:
-        return "action_mss_economics_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**MSS in Economics Program Fee**\n\nFor detailed MSS Economics tuition information, please contact admissions.")
-        return []
-
-class ActionMAEnglishFee(Action):
-    def name(self) -> Text:
-        return "action_ma_english_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**MA in English Program Fee**\n\nFor detailed MA English tuition information, please contact admissions.")
-        return []
-
-class ActionMATESOLFee(Action):
-    def name(self) -> Text:
-        return "action_ma_tesol_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**MA in TESOL Program Fee**\n\nFor detailed MA TESOL tuition information, please contact admissions.")
-        return []
-
-class ActionLLMFee(Action):
-    def name(self) -> Text:
-        return "action_llm_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**Master of Laws (LL.M.) Program Fee**\n\nFor detailed LL.M tuition information, please contact admissions.")
-        return []
-
-class ActionMPRHGDFee(Action):
-    def name(self) -> Text:
-        return "action_mprhgd_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**MPRHGD Program Fee**\n\nFor detailed MPRHGD tuition information, please contact admissions.")
-        return []
-
-class ActionDSAnalyticsFee(Action):
-    def name(self) -> Text:
-        return "action_ds_analytics_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**MS Data Science & Analytics Program Fee**\n\nFor detailed MS Data Science tuition information, please contact admissions.")
-        return []
-
-class ActionMSCSEFee(Action):
-    def name(self) -> Text:
-        return "action_ms_cse_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**MS in Computer Science & Engineering (MS CSE) Program Fee**\n\nFor detailed MS CSE tuition information, please contact admissions.")
-        return []
-
-class ActionMPharmFee(Action):
-    def name(self) -> Text:
-        return "action_mpharm_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**M.Pharm Program Fee**\n\nFor detailed M.Pharm tuition information, please contact admissions.")
-        return []
-
-class ActionPGDEDFee(Action):
-    def name(self) -> Text:
-        return "action_pgded_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**PGDED (Post Graduate Diploma in Entrepreneurship Development) Program Fee**\n\nFor detailed PGDED tuition information, please contact admissions.")
-        return []
-
-class ActionPPDMFee(Action):
-    def name(self) -> Text:
-        return "action_ppdm_fee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="**PPDM (Post Graduate Diploma in Population, Public Health and Disaster Management) Program Fee**\n\nFor detailed PPDM tuition information, please contact admissions.")
-        return []
-
-# ========================================
-# ADMISSION DEADLINES
-# ========================================
-
-class ActionAdmissionDeadlineGeneral(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_general"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            dispatcher.utter_message(text="Sorry, admission information is currently unavailable.")
-            return []
-        
-        # Build header message
-        message = f"**{data['page_info']['semester']} Admission Deadlines**\n\n"
-        
-        # Undergraduate Programs Section
-        message += "** Undergraduate Programs:**\n"
-        for program in data['undergraduate_admission']:
-            prog_name = program['program']
-            deadline = program['application_deadline']
-            message += f"• {prog_name}: {deadline}\n"
-        
-        # Graduate Programs Section
-        message += "\n** Graduate Programs:**\n"
-        for program in dat['graduate_admission']:
-            prog_name = program['program']
-            deadline = program['application_deadline']
-            message += f"• {prog_name}: {deadline}\n"
-        
-        # Footer note
-        message += f"\n*{data['page_info']['disclaimer']}*"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-class ActionAdmissionDeadlineCSE(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_cse"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'CSE' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Application Deadline:** {prog['application_deadline']}\n📝 **Test Date:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineBBA(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_bba"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'BBA' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Application Deadline:** {prog['application_deadline']}\n📝 **Test Date:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineEconomics(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_economics"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'Economics' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineEnglish(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_english"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'English' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineLaw(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_law"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'LLB' in p['program'] or 'Law' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineSociology(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_sociology"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'Sociology' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineInformationStudies(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_information_studies"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'Information Studies' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlinePPHS(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_pphs"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'Public Health' in p['program'] or 'PPHS' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineICE(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_ice"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'ICE' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineEEE(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_eee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'EEE' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlinePharmacy(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_pharmacy"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'Pharmacy' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineGEB(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_geb"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'Genetic' in p['program'] or 'Biotechnology' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineCivil(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_civil"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'Civil' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineMath(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_math"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'Mathematics' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineDataScience(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_data_science"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'Data Science' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-# ========================================
-# ADMISSION DEADLINES (GRADUATE)
-# ========================================
-
-class ActionAdmissionDeadlineMBA(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_mba"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'MBA' in p['program'] and 'Executive' not in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineEMBA(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_emba"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'Executive MBA' in p['program'] or 'EMBA' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineMDS(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_mds"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'MDS' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineMSSEconomics(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_mss_economics"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'MSS' in p['program'] and 'Economics' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineMAEnglish(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_ma_english"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'MA in English' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineMATESOL(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_ma_tesol"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'TESOL' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineMPRHGD(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_mprhgd"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'MPRHGD' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineLLM(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_llm"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'LLM' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineMSCSE(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_ms_cse"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'MS in CSE' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineMSDataScience(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_ms_data_science"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'Data Science' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlineMPharm(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_mpharm"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'Master of Pharmacy' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionDeadlinePPDM(Action):
-    def name(self) -> Text:
-        return "action_admission_deadline_ppdm"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'PPDM' in p['program']), None)
-        if prog:
-            message = f"**{prog['program']}**\n\n📅 **Deadline:** {prog['application_deadline']}\n📝 **Test:** {prog['admission_test']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-# ========================================
-# ADMISSION TEST DATES
-# ========================================
-
-class ActionAdmissionTestDateGeneral(Action):
-    def name(self) -> Text:
-        return "action_admission_test_date_general"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        message = "**Admission Test Dates at EWU**\n\n"
-        message += "**Engineering/Science Programs:** Aug 30, 2025 at 2:30 PM\n"
-        message += "**Business/Arts Programs:** Aug 30, 2025 at 10:00 AM\n\n"
-        message += "*For specific program test dates, please ask about your desired program.*"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionTestDateCSE(Action):
-    def name(self) -> Text:
-        return "action_admission_test_date_cse"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'CSE' in p['program']), None)
-        if prog:
-            message = f"**Computer Science & Engineering (CSE) Admission Test**\n\n"
-            message += f" **Test:** {prog['admission_test']}\n"
-            message += f" **Apply by:** {prog['application_deadline']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionTestDateBBA(Action):
-    def name(self) -> Text:
-        return "action_admission_test_date_bba"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['undergraduate_admission'] if 'BBA' in p['program']), None)
-        if prog:
-            message = f"**BBA Admission Test**\n\n"
-            message += f" **Test:** {prog['admission_test']}\n"
-            message += f" **Apply by:** {prog['application_deadline']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionTestDateMBA(Action):
-    def name(self) -> Text:
-        return "action_admission_test_date_mba"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_calendar()
-        if not data:
-            return []
-        prog = next((p for p in data['graduate_admission'] if 'MBA' in p['program'] and 'Executive' not in p['program']), None)
-        if prog:
-            message = f"**MBA Admission Test**\n\n"
-            message += f" **Test:** {prog['admission_test']}\n"
-            message += f" **Apply by:** {prog['application_deadline']}"
-            dispatcher.utter_message(text=message)
-        return []
-
-# ========================================
-# ADMISSION REQUIREMENTS ACTIONS
-# ========================================
-
-class ActionAdmissionRequirementsGeneral(Action):
-    def name(self) -> Text:
-        return "action_admission_requirements_general"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_requirements()
-        if not data:
-            dispatcher.utter_message(text="Sorry, admission requirements information is unavailable.")
-            return []
-        
-        ug = data['admission_requirements']['undergraduate']['general_programs_except_bpharm']
-        message = "**Undergraduate Admission Requirements at EWU**\n\n"
-        message += f" **SSC & HSC:** {ug['ssc_hsc']}\n"
-        message += f" **Diploma:** {ug['diploma']}\n"
-        message += f" **O/A Levels:** {ug['o_a_levels']['requirement']}\n\n"
-        message += "**Admission Test Weightage:**\n"
-        message += f"- Admission Test: {ug['admission_test']['weightage']['admission_test']}\n"
-        message += f"- SSC/O Level: {ug['admission_test']['weightage']['ssc_o_level']}\n"
-        message += f"- HSC/A Level: {ug['admission_test']['weightage']['hsc_a_level']}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionRequirementsCSE(Action):
-    def name(self) -> Text:
-        return "action_admission_requirements_cse"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_requirements()
-        if not data:
-            return []
-        
-        ug = data['admission_requirements']['undergraduate']['general_programs_except_bpharm']
-        cse_req = ug['subject_requirements']['cse']
-        message = "**B.Sc. in CSE Admission Requirements**\n\n"
-        message += f" **Academic:** {ug['ssc_hsc']}\n"
-        message += f" **Subject Requirements:** {cse_req}\n\n"
-        message += "**Test Weightage:**\n"
-        message += f"- Admission Test: {ug['admission_test']['weightage']['admission_test']}\n"
-        message += f"- SSC: {ug['admission_test']['weightage']['ssc_o_level']}\n"
-        message += f"- HSC: {ug['admission_test']['weightage']['hsc_a_level']}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionRequirementsPharmacy(Action):
-    def name(self) -> Text:
-        return "action_admission_requirements_pharmacy"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_requirements()
-        if not data:
-            return []
-        
-        pharm = data['admission_requirements']['undergraduate']['bpharm']
-        message = "**B.Pharm Admission Requirements**\n\n"
-        message += f"🇧🇩 **Citizenship:** {pharm['citizenship']}\n"
-        message += f" **GPA:** {pharm['ssc_hsc']['aggregate']}\n"
-        message += f" **Each Exam:** {pharm['ssc_hsc']['minimum_each']}\n\n"
-        message += "**Subject Requirements (Minimum GPA):**\n"
-        message += f"- Chemistry: {pharm['subject_gpa']['chemistry']}\n"
-        message += f"- Biology: {pharm['subject_gpa']['biology']}\n"
-        message += f"- Physics: {pharm['subject_gpa']['physics']}\n"
-        message += f"- Mathematics: {pharm['subject_gpa']['mathematics']}\n\n"
-        message += f" {pharm['special_note']}\n"
-        message += f" {pharm['year_of_pass']}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionAdmissionRequirementsMBA(Action):
-    def name(self) -> Text:
-        return "action_admission_requirements_mba"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_requirements()
-        if not data:
-            return []
-        
-        mba = data['admission_requirements']['graduate']['mba_emba']
-        message = "**MBA Admission Requirements**\n\n"
-        message += f" **Degree:** {mba['degree']}\n"
-        message += f" *SSC & HSC:** {mba['ssc_hsc_gpa']}\n"
-        message += f"💼 **Work Experience:** {mba['mba']['work_experience']}\n\n"
-        message += "**Test Exemptions:**\n"
-        message += f"- EWU Graduates: {mba['test_exemptions']['ewu_graduates']}\n"
-        message += f"- Other Universities: {mba['test_exemptions']['other_universities']}"
-        dispatcher.utter_message(text=message)
-        return []
-
-# ============================================================================
-# MISSING ADMISSION PROCESS ACTION FUNCTIONS
-# ============================================================================
-
-class ActionAdmissionApplicationSteps(Action):
-    """Display all 11 application steps for admission"""
-    def name(self) -> Text:
-        return "action_admission_application_steps"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_process()
-        if not data:
-            dispatcher.utter_message(text="Sorry, I couldn't retrieve the application steps.")
-            return []
-        
-        app_section = data.get('admission_process', {}).get('application', {})
-        message = "** EWU Admission Application - 11 Steps**\n\n"
-        
-        # Website links
-        links = app_section.get('website_links', [])
-        message += "** Admission Websites:**\n"
-        for link in links:
-            message += f"- {link}\n"
-        
-        # Browser recommendations
-        browsers = app_section.get('browser_recommendation', [])
-        message += f"\n** Recommended Browsers:** {', '.join(browsers)}\n\n"
-        
-        # Application steps
-        steps = app_section.get('steps', [])
-        message += "** Application Steps:**\n\n"
-    
-        for step_info in steps:
-            step_num = step_info.get('step', '')
-            action = step_info.get('action', '')
-            details = step_info.get('details', '')
-            
-            message += f"**Step {step_num}: {action}**\n"
-            
-            if isinstance(details, dict):
-                for key, value in details.items():
-                    message += f"- **{key}:** "
-                    if isinstance(value, list):
-                        message += "\n"
-                        for item in value:
-                            message += f"  • {item}\n"
-                    else:
-                        message += f"{value}\n"
-            elif isinstance(details, list):
-                for detail in details:
-                    message += f"- {detail}\n"
-            else:
-                message += f"{details}\n"
-            message += "\n"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-class ActionAdmissionContact(Action):
-    """Display admission office contact information"""
-    def name(self) -> Text:
-        return "action_admission_contact"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_process()
-        if not data:
-            dispatcher.utter_message(text="Sorry, contact information is unavailable.")
-            return []
-        
-        admission = data.get('admission_process', {})
-        contacts = admission.get('contacts', {})
-        
-        message = "** EWU Admission Contact Information**\n\n"
-                # Admission Office
-        admission_office = contacts.get('admission_office', {})
-        message += "** Admission Office**\n"
-        message+= f" Address: {admission_office.get('address', 'N/A')}\n\n"
-        message += "** Phone Numbers:**\n"
-        for phone in admission_office.get('phone', []):
-            message += f"- {phone}\n"
-        message += f"Email: {admission_office.get('email', 'N/A')}\n\n"
-        
-        # Support Contacts
-        support = contacts.get('support', {})
-        message += "** Support Contacts:**\n"
-        message += f" Payment Issues: {support.get('payment_issues', 'N/A')}\n"
-        message += f" Technical Issues: {support.get('technical_issues', 'N/A')}\n"
-        message += f" Advising/Courses: {support.get('advising_or_course_issues', 'N/A')}\n\n"
-        
-        # Registrar
-        registrar = admission.get('registrar', {})
-        message += "** Registrar**\n"
-        message += f"- {registrar.get('name', 'N/A')}\n"
-        message += f"- {registrar.get('designation', 'N/A')}\n"
-        message += f"- {registrar.get('university', 'N/A')}"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-class ActionPostAdmissionGSuite(Action):
-    """Display G Suite email activation instructions"""
-    def name(self) -> Text:
-        return "action_post_admission_g_suite"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_process()
-        if not data:
-            dispatcher.utter_message(text="Sorry, G Suite information is unavailable.")
-            return []
-        
-        g_suite = data.get('admission_process', {}).get('post_admission', {}).get('g_suite_activation', {})
-        
-        message = "** EWU G Suite Email Activation**\n\n"
-        message += f"** Important Note:** {g_suite.get('note', 'N/A')}\n\n"
-        message += f"** Portal Link:** {g_suite.get('link', 'N/A')}\n\n"
-        message += "**Step-by-Step Instructions:**\n"
-        
-        for i, instruction in enumerate(g_suite.get('instructions', []), 1):
-            message += f"{i}. {instruction}\n"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionPostAdmissionDocumentUpload(Action):
-    """Display document upload requirements"""
-    def name(self) -> Text:
-        return "action_post_admission_document_upload"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        
-        data = load_admission_requirements()
-        
-        if not data:
-            dispatcher.utter_message(text="Sorry, admission requirements file not found.")
-            return []
-        
-        required_docs = data.get('admission_requirements', {}).get('required_documents', [])
-        
-        if not required_docs:
-            dispatcher.utter_message(text="Sorry, document information is unavailable.")
-            return []
-        
-        message = "** Required Documents for Admission**\n\n"
-        message += f"**University:** {data.get('university', 'East West University')}\n\n"
-        
-        message += "** Documents You Need to Bring:**\n\n"
-        for i, doc in enumerate(required_docs, 1):
-            message += f"{i}. {doc}\n"
-        
-        message += "\n** Important Note:**\n"
-        message += "• Bring both original documents and photocopies\n"
-        message += "• Original documents will be returned after verification\n"
-        message += "• Make sure all documents are complete and properly attested\n"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-
-
-class ActionPostAdmissionAdvisingSlip(Action):
-    """Display advising slip access information"""
-    def name(self) -> Text:
-        return "action_post_admission_advising_slip"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_process()
-        if not data:
-            dispatcher.utter_message(text="Sorry, advising slip information is unavailable.")
-            return []
-        
-        advising = data.get('admission_process', {}).get('post_admission', {}).get('advising_slip', {})
-        
-        message = "** Advising Slip Access**\n\n"
-        message += f"**Purpose:** {advising.get('purpose', 'N/A')}\n\n"
-        
-        message += "**How to Access (4 Steps):**\n"
-        for i, instruction in enumerate(advising.get('instructions', []), 1):
-            message += f"{i}. {instruction}\n"
-        
-        message += f"\n**Academic Calendar:** {advising.get('academic_calendar_link', 'N/A')}"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-class ActionPostAdmissionTuitionPayment(Action):
-    """Display tuition payment information"""
-    def name(self) -> Text:
-        return "action_post_admission_tuition_payment"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_process()
-        if not data:
-            dispatcher.utter_message(text="Sorry, payment information is unavailable.")
-            return []
-        
-        tuition = data.get('admission_process', {}).get('post_admission', {}).get('tuition_payment', {})
-        
-        message = "** Tuition Payment Information**\n\n"
-        
-        message += "**Requirements:**\n"
-        for req in tuition.get('requirements', []):
-            message += f"✓ {req}\n"
-        
-        message += "**\n**Payment Methods:**\n"
-        for method in tuition.get('payment_methods', []):
-            message += f"- {method}\n"
-        
-        message += f"\n** Important Note:**\n{tuition.get('important_note', 'N/A')}"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-class ActionAdmissionImportantNotes(Action):
-    """Display important admission notes"""
-    def name(self) -> Text:
-        return "action_admission_important_notes"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_process()
-        if not data:
-            dispatcher.utter_message(text="Sorry, important notes are unavailable.")
-            return []
-        
-        notes = data.get('admission_process', {}).get('important_notes', [])
-        
-        message = "** Important Admission Notes**\n\n"
-        for i, note in enumerate(notes, 1):
-            message += f"{i}. {note}\n\n"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-class ActionCompleteAdmissionProcess(Action):
-    """Display complete admission process overview"""
-    def name(self) -> Text:
-        return "action_complete_admission_process"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_admission_process()
-        if not data:
-            dispatcher.utter_message(text="Sorry, admission information is unavailable.")
-            return []
-        
-        message = "** Complete EWU Admission Process**\n\n"
-        
-        message += "**PHASE 1: APPLICATION (11 Steps)**\n"
-        message += "- Visit EWU admission website\n"
-        message += "- Create account and select program\n"
-        message += "- Fill application form\n"
-        message += "- Pay application fee (Tk 1500)\n"
-        message += "- Upload photo & signature\n"
-        message += "- Submit form\n"
-        message += "- Download admit card\n"
-        message += "- Bring documents to exam\n\n"
-        
-        message += "**PHASE 2: POST-ADMISSION SETUP**\n"
-        message += " Activate G Suite email account\n"
-        message += " Upload required academic documents (8 docs)\n"
-        message += " View advising slip with courses\n"
-        message += " Pay tuition via designated banks\n\n"
-        
-        message += "**Need More Information?**\n"
-        message += "Ask about: application steps, documents, email setup, payment methods, or contact info."
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-class ActionAdmissionHelp(Action):
-    """Help with admission queries"""
-    def name(self) -> Text:
-        return "action_admission_help"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        message = "** Admission Help**\n\n"
-        message += "I can help you with:\n"
-        message += "-  Application steps (11 steps detailed)\n"
-        message += "-  Contact information\n"
-        message += "-  Email setup after admission\n"
-        message += "-  Document requirements\n"
-        message += "-  Tuition payment methods\n"
-        message += "-  Advising slip information\n"
-        message += "-  Important policies\n\n"
-        message += "What would you like to know?"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-# ========================================
-# FACILITIES ACTIONS
-# ========================================
-
-class ActionFacilitiesGeneral(Action):
-    def name(self) -> Text:
-        return "action_facilities_general"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            dispatcher.utter_message(text="Sorry, facilities information is unavailable.")
-            return []
-        
-        campus = data['facilities']['campus_life']['available']
-        message = "**East West University Campus Facilities**\n\n"
-        for facility in campus[:7]:
-            message += f" **{facility['name']}**\n{facility['description']}\n\n"
-        message += "*Ask about specific facilities like library, labs, cafeteria, wifi, etc.*"
-        dispatcher.utter_message(text=message)
-        return []
-
-
-class ActionLabFacilities(Action):
-    def name(self) -> Text:
-        return "action_lab_facilities"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        
-        eng_labs = data['facilities']['engineering_labs']
-        message = "**Engineering Laboratories at EWU**\n\n"
-        message += f"**Departments:** {', '.join(eng_labs['departments'])}\n\n"
-        message += "**Available Labs:**\n"
-        for lab in eng_labs['labs'][:5]:
-            message += f" {lab['name']}\n"
-        message += f"\n*Total: {len(eng_labs['labs'])} specialized labs available*"
-        dispatcher.utter_message(text=message)
-        return []
-    
-class ActionFacilitiesGeneral(Action):
-    def name(self) -> Text:
-        return "action_facilities_general"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        message = ("**EWU Facilities**\n\n"
-                  "East West University provides comprehensive facilities including:\n"
-                  " Libraries, Computer Labs, Engineering Labs\n"
-                  " Cafeteria, Prayer Rooms, Common Areas\n"
-                  " Parking, Transportation, Sports Facilities\n"
-                  " Medical Facilities, Hostels\n"
-                  "Research Centers & More!\n\n"
-                  "Ask about any specific facility!")
-        dispatcher.utter_message(text=message)
-        return []
-
-    
-# ========================================
-# MISSING FACILITY ACTIONS
-# ========================================
-
-class ActionCampusLife(Action):
-    def name(self) -> Text:
-        return "action_campus_life"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        campus_life = data.get('facilities', {}).get('campus_life', {})
-        message = f"**Campus Life**\n\n{campus_life.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionCivilEngineeringLabs(Action):
-    def name(self) -> Text:
-        return "action_civil_engineering_labs"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        labs = data.get('facilities', {}).get('civil_engineering_labs', {})
-        message = f"**Civil Engineering Labs**\n\n{labs.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionEngineeringLabs(Action):
-    def name(self) -> Text:
-        return "action_engineering_labs"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        labs = data.get('facilities', {}).get('engineering_labs', {})
-        message = f"**Engineering Labs**\n\n{labs.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionICSServices(Action):
-    def name(self) -> Text:
-        return "action_ics_services"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        ics = data.get('facilities', {}).get('ics_services', {})
-        message = f"**ICS Services**\n\n{ics.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionPharmacyLabs(Action):
-    def name(self) -> Text:
-        return "action_pharmacy_labs"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        labs = data.get('facilities', {}).get('pharmacy_labs', {})
-        message = f"**Pharmacy Labs**\n\n{labs.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionResearchCenter(Action):
-    def name(self) -> Text:
-        return "action_research_center"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        center = data.get('facilities', {}).get('research_center', {})
-        message = f"**Research Center**\n\n{center.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionComputerLab(Action):
-    def name(self) -> Text:
-        return "action_computer_lab"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        lab = data.get('facilities', {}).get('computer_lab', {})
-        message = f"**Computer Lab**\n\n{lab.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionWiFiInternet(Action):
-    def name(self) -> Text:
-        return "action_wifi_internet"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        wifi = data.get('facilities', {}).get('wifi_internet', {})
-        message = f"**WiFi & Internet**\n\n{wifi.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionParkingFacilities(Action):
-    def name(self) -> Text:
-        return "action_parking_facilities"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        parking = data.get('facilities', {}).get('parking_facilities', {})
-        message = f"**Parking Facilities**\n\n{parking.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionSportsFacilities(Action):
-    def name(self) -> Text:
-        return "action_sports_facilities"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        sports = data.get('facilities', {}).get('sports_facilities', {})
-        message = f"**Sports Facilities**\n\n{sports.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionHostelFacilities(Action):
-    def name(self) -> Text:
-        return "action_hostel_facilities"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        hostel = data.get('facilities', {}).get('hostel_facilities', {})
-        message = f"**Hostel Facilities**\n\n{hostel.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionMedicalFacilities(Action):
-    def name(self) -> Text:
-        return "action_medical_facilities"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        medical = data.get('facilities', {}).get('medical_facilities', {})
-        message = f"**Medical Facilities**\n\n{medical.get('description', 'Yes, medical facilities are available https://www.ewubd.edu/admin-office/ewu-medical-centre')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionPrayerRoom(Action):
-    def name(self) -> Text:
-        return "action_prayer_room"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        prayer = data.get('facilities', {}).get('prayer_room', {})
-        message = f"**Prayer Room**\n\n{prayer.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionCommonRoom(Action):
-    def name(self) -> Text:
-        return "action_common_room"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        common = data.get('facilities', {}).get('common_room', {})
-        message = f"**Common Room**\n\n{common.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionCareerCounseling(Action):
-    def name(self) -> Text:
-        return "action_career_counseling"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        career = data.get('facilities', {}).get('career_counseling', {})
-        message = f"**Career Counseling**\n\n{career.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-# ========================================
-# MISSING FACILITY ACTIONS (4 remaining)
-# ========================================
-
-class ActionCafeteriaFacilities(Action):
-    def name(self) -> Text:
-        return "action_cafeteria_facilities"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        cafeteria = data.get('facilities', {}).get('cafeteria', {})
-        message = f"**Cafeteria Facilities**\n\n{cafeteria.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacilitiesGeneral(Action):
-    def name(self) -> Text:
-        return "action_facilities_general"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        message = "**EWU Facilities**\n\nEast West University provides world-class facilities for students including libraries, labs, sports centers, and more. Which facility would you like to know more about?"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionLibraryFacilities(Action):
-    def name(self) -> Text:
-        return "action_library_facilities"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        library = data.get('facilities', {}).get('library', {})
-        message = f"**Library Facilities**\n\n{library.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionTransportationFacilities(Action):
-    def name(self) -> Text:
-        return "action_transportation_facilities"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_facilities()
-        if not data:
-            return []
-        transport = data.get('facilities', {}).get('transportation', {})
-        message = f"**Transportation Facilities**\n\n{transport.get('description', 'N/A')}"
-        dispatcher.utter_message(text=message)
-        return []
-
-
-# ========================================
-# EVENTS ACTIONS
-# ========================================
-
-class ActionEventsWorkshops(Action):
-    def name(self) -> Text:
-        return "action_events_workshops"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_events()
-        if not data:
-            dispatcher.utter_message(text="Sorry, events information is unavailable.")
-            return []
-        
-        message = f"**{data['page_info']['title']}**\n\n"
-        for event in data['events_workshops'][:5]:
-            message += f" **{event['date']}**\n**{event['title']}**\n{event.get('description', '')}\n\n"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionRecentEvents(Action):
-    def name(self) -> Text:
-        return "action_recent_events"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_events()
-        if not data:
-            return []
-        
-        message = "**Recent Events at EWU**\n\n"
-        for event in data['events_workshops'][:3]:
-            message += f" **{event['date']}**\n"
-            message += f"**{event['title']}**\n"
-            message += f"{event.get('description', '')}\n\n"
-        dispatcher.utter_message(text=message)
-        return []
-
-# ========================================
-# FACULTY ACTIONS
-# ========================================
-
-class ActionFacultyInfo(Action):
-    def name(self) -> Text:
-        return "action_faculty_info"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            dispatcher.utter_message(text="Sorry, faculty information is unavailable.")
-            return []
-        
-        message = "**Faculty Information - East West University**\n\n"
-        message += f"**Total Departments:** {len(data.get('departments', []))}\n\n"
-        message += "**Available Departments:**\n"
-        for dept in list(data.get('departments', []))[:8]:
-            name = dept.get('department_name', 'Unknown')
-            message += f" {name}\n"
-        message += "\n*As about specific department faculty (e.g., CSE faculty, BBA faculty)*"
-        dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyCSE(Action):
-    def name(self) -> Text:
-        return "action_faculty_cse"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        cse_dept = next((d for d in data.get('departments', [])
-                        if 'CSE' in d.get('department_name', '') or 'Computer Science' in d.get('department_name', '')), None)
-        if cse_dept and 'faculty_members' in cse_dept:
-            message = f"**{cse_dept['department_name']} Faculty**\n\n"
-            for faculty in cse_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(cse_dept['faculty_members'])
-            message += f"*Total CSE Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyBBA(Action):
-    def name(self) -> Text:
-        return "action_faculty_bba"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        bba_dept = next((d for d in data.get('departments', [])
-                        if 'BBA' in d.get('department_name', '') or 'Business' in d.get('department_name', '')), None)
-        if bba_dept and 'faculty_members' in bba_dept:
-            message = f"**{bba_dept['department_name']} Faculty**\n\n"
-            for faculty in bba_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(bba_dept['faculty_members'])
-            message += f"*Total BBA Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-    
-class ActionFacultyEEE(Action):
-    def name(self) -> Text:
-        return "action_faculty_eee"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        eee_dept = next((d for d in data.get('departments', [])
-                        if 'EEE' in d.get('department_name', '') or 'Electrical' in d.get('department_name', '')), None)
-        if eee_dept and 'faculty_members' in eee_dept:
-            message = f"**{eee_dept['department_name']} Faculty**\n\n"
-            for faculty in eee_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(eee_dept['faculty_members'])
-            message += f"*Total EEE Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyICE(Action):
-    def name(self) -> Text:
-        return "action_faculty_ice"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        ice_dept = next((d for d in data.get('departments', [])
-                        if 'ICE' in d.get('department_name', '') or 'Communication' in d.get('department_name', '')), None)
-        if ice_dept and 'faculty_members' in ice_dept:
-            message = f"**{ice_dept['department_name']} Faculty**\n\n"
-            for faculty in ice_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(ice_dept['faculty_members'])
-            message += f"*Total ICE Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyPharmacy(Action):
-    def name(self) -> Text:
-        return "action_faculty_pharmacy"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        pharm_dept = next((d for d in data.get('departments', [])
-                          if 'Pharmacy' in d.get('department_name', '')), None)
-        if pharm_dept and 'faculty_members' in pharm_dept:
-            message = f"**{pharm_dept['department_name']} Faculty**\n\n"
-            for faculty in pharm_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(pharm_dept['faculty_members'])
-            message += f"*Total Pharmacy Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyCivil(Action):
-    def name(self) -> Text:
-        return "action_faculty_civil"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        civil_dept = next((d for d in data.get('departments', [])
-                          if 'Civil' in d.get('department_name', '')), None)
-        if civil_dept and 'faculty_members' in civil_dept:
-            message = f"**{civil_dept['department_name']} Faculty**\n\n"
-            for faculty in civil_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(civil_dept['faculty_members'])
-            message += f"*Total Civil Engineering Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyGEB(Action):
-    def name(self) -> Text:
-        return "action_faculty_geb"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        geb_dept = next((d for d in data.get('departments', [])
-                        if 'GEB' in d.get('department_name', '') or 'Genetic Engineering' in d.get('department_name', '')), None)
-        if geb_dept and 'faculty_members' in geb_dept:
-            message = f"**{geb_dept['department_name']} Faculty**\n\n"
-            for faculty in geb_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(geb_dept['faculty_members'])
-            message += f"*Total GEB Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyEconomics(Action):
-    def name(self) -> Text:
-        return "action_faculty_economics"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        econ_dept = next((d for d in data.get('departments', [])
-                         if 'Economics' in d.get('department_name', '')), None)
-        if econ_dept and 'faculty_members' in econ_dept:
-            message = f"**{econ_dept['department_name']} Faculty**\n\n"
-            for faculty in econ_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(econ_dept['faculty_members'])
-            message += f"*Total Economics Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyEnglish(Action):
-    def name(self) -> Text:
-        return "action_faculty_english"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        eng_dept = next((d for d in data.get('departments', [])
-                        if 'English' in d.get('department_name', '')), None)
-        if eng_dept and 'faculty_members' in eng_dept:
-            message = f"**{eng_dept['department_name']} Faculty**\n\n"
-            for faculty in eng_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(eng_dept['faculty_members'])
-            message += f"*Total English Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyLaw(Action):
-    def name(self) -> Text:
-        return "action_faculty_law"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        law_dept = next((d for d in data.get('departments', [])
-                        if 'Law' in d.get('department_name', '')), None)
-        if law_dept and 'faculty_members' in law_dept:
-            message = f"**{law_dept['department_name']} Faculty**\n\n"
-            for faculty in law_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(law_dept['faculty_members'])
-            message += f"*Total Law Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyMath(Action):
-    def name(self) -> Text:
-        return "action_faculty_math"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        math_dept = next((d for d in data.get('departments', [])
-                         if 'Mathematics' in d.get('department_name', '')), None)
-        if math_dept and 'faculty_members' in math_dept:
-            message = f"**{math_dept['department_name']} Faculty**\n\n"
-            for faculty in math_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(math_dept['faculty_members'])
-            message += f"*Total Mathematics Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultySociology(Action):
-    def name(self) -> Text:
-        return "action_faculty_sociology"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        soc_dept = next((d for d in data.get('departments', [])
-                        if 'Sociology' in d.get('department_name', '')), None)
-        if soc_dept and 'faculty_members' in soc_dept:
-            message = f"**{soc_dept['department_name']} Faculty**\n\n"
-            for faculty in soc_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(soc_dept['faculty_members'])
-            message += f"*Total Sociology Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyInformationStudies(Action):
-    def name(self) -> Text:
-        return "action_faculty_information_studies"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        is_dept = next((d for d in data.get('departments', [])
-                       if 'Information Studies' in d.get('department_name', '')), None)
-        if is_dept and 'faculty_members' in is_dept:
-            message = f"**{is_dept['department_name']} Faculty**\n\n"
-            for faculty in is_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(is_dept['faculty_members'])
-            message += f"*Total Information Studies Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyPPHS(Action):
-    def name(self) -> Text:
-        return "action_faculty_pphs"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        pphs_dept = next((d for d in data.get('departments', [])
-                         if 'PPHS' in d.get('department_name', '') or 'Public Health' in d.get('department_name', '')), None)
-        if pphs_dept and 'faculty_members' in pphs_dept:
-            message = f"**{pphs_dept['department_name']} Faculty**\n\n"
-            for faculty in pphs_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(pphs_dept['faculty_members'])
-            message += f"*Total PPHS Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultyDataScience(Action):
-    def name(self) -> Text:
-        return "action_faculty_data_science"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        ds_dept = next((d for d in data.get('departments', [])
-                       if 'Data Science' in d.get('department_name', '') or 'Analytics' in d.get('department_name', '')), None)
-        if ds_dept and 'faculty_members' in ds_dept:
-            message = f"**{ds_dept['department_name']} Faculty**\n\n"
-            for faculty in ds_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(ds_dept['faculty_members'])
-            message += f"*Total Data Science Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-
-class ActionFacultySocialRelations(Action):
-    def name(self) -> Text:
-        return "action_faculty_social_relations"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            return []
-        
-        sr_dept = next((d for d in data.get('departments', [])
-                       if 'Social Relations' in d.get('department_name', '')), None)
-        if sr_dept and 'faculty_members' in sr_dept:
-            message = f"**{sr_dept['department_name']} Faculty**\n\n"
-            for faculty in sr_dept['faculty_members'][:5]:
-                message += f" **{faculty.get('name', 'N/A')}**\n"
-                message += f"   {faculty.get('designation', 'N/A')}\n"
-                if 'email' in faculty:
-                    message += f"  {faculty['email']}\n"
-                message += "\n"
-            total = len(sr_dept['faculty_members'])
-            message += f"*Total Social Relations Faculty: {total} members*"
-            dispatcher.utter_message(text=message)
-        return []
-# ========================================
-# CHAIRPERSON INFORMATION ACTION
-# ========================================
-
-class ActionChairpersonInfo(Action):
-    def name(self) -> Text:
-        return "action_chairperson_info"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_faculty()
-        if not data:
-            dispatcher.utter_message(text="Sorry, chairperson information is currently unavailable.")
-            return []
-        
-        # Find all chairpersons (those with "Chairperson" in designation)
-        chairpersons = [f for f in data.get('faculty', []) 
-                       if 'Chairperson' in f.get('designation', '')]
-        
-        if chairpersons:
-            message = "**Department Chairpersons at EWU**\n\n"
-            for chair in chairpersons:
-                message += f" **{chair.get('name', 'N/A')}**\n"
-                message += f"   Department: {chair.get('department', 'N/A')}\n"
-                message += f"   Position: {chair.get('designation', 'N/A')}\n"
-                if 'profile_url' in chair:
-                    message += f"  Profile: {chair['profile_url']}\n"
-                message += "\n"
-            dispatcher.utter_message(text=message)
-        else:
-            dispatcher.utter_message(text="Chairperson information not available.")
-        return []
-
-
-# ========================================
-# GRADING SYSTEM ACTION
-# ========================================
-
-class ActionGradingSystem(Action):
-    def name(self) -> Text:
-        return "action_grading_system"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        data = load_grading()
-        if not data:
-            dispatcher.utter_message(text="Sorry, grading information is unavailable.")
-            return []
-        
-        grading = data['grading_system']
-        message = f"**{grading['title']}**\n\n"
-        message += f"{grading['description']}\n\n"
-        message += "**Grade Scale:**\n"
-        for grade in grading['grade_scale']:
-            message += f"- **{grade['letter_grade']}**: {grade['numerical_score']} – {grade['grade_point']} GPA\n"
-        
-        message += "\n**Special Grades:**\n"
-        for spec_grade in grading['special_grades']:
-            message += f"- **{spec_grade['grade']}**: {spec_grade['description']}\n"
-        
-        dispatcher.utter_message(text=message)
-        return []
-
-
-import requests
-from rasa_sdk import Action, Tracker
-from rasa_sdk.executor import CollectingDispatcher
-from typing import Any, Text, Dict, List
-import logging
-
-logger = logging.getLogger(__name__)
-
-
-class ActionPhi3RagAnswer(Action):
-    """RAG-powered answer generation using TinyLlama"""
-    
-    def name(self) -> Text:
-        return "action_phi3_rag_answer"
-    
-    def run(
-        self,
-        dispatcher: CollectingDispatcher,
-        tracker: Tracker,
-        domain: Dict[Text, Any],
-    ) -> List[Dict[Text, Any]]:
-        
-        user_message = tracker.latest_message.get("text", "")
-        
-        if not user_message.strip():
-            dispatcher.utter_message(text="I didn't catch that. Could you please rephrase?")
-            return []
-        
-        # Build conversation history (for future use)
-        history = self._build_history(tracker)
-        
-        # Call RAG service with TinyLlama
-        answer, confidence, sources, processing_time = self._call_rag(user_message)
-        
-        # Send appropriate response based on confidence
-        self._send_response(dispatcher, answer, confidence, sources, processing_time)
-        
-        return []
-    
-    def _call_rag(self, query: str) -> tuple:
+    Bug fix: department codes like "CE" were previously matched using a plain
+    substring check, so "ce" would hit inside words like "office", "science",
+    "register". All code matching now uses regex word boundaries (\\b) to
+    ensure only standalone tokens qualify.
+    """
+
+    def name(self): return "action_get_helpdesk_contacts"
+
+    _GITHUB_FILE = "helpdesk_contacts.json"
+
+    # Extra aliases for admin offices whose common name differs from the key.
+    # Maps lowercase alias -> lowercase office key in the JSON.
+    _ADMIN_ALIASES = {
+        "register":    "registrar",
+        "registrar":   "registrar",
+        "reg office":  "registrar",
+        "account":     "accounts",
+        "finance":     "accounts",
+        "financial":   "accounts",
+        "it":          "ics",
+        "tech":        "ics",
+        "certificate": "coe",
+        "transcript":  "coe",
+        "grade report":"coe",
+    }
+
+    # ── internal helpers ──────────────────────────────────────────────────────
+
+    def _load_raw(self) -> dict:
+        """Return the helpdesk JSON dict, preferring preloaded DATA."""
+        raw = DATA.get("helpdesk_contacts") or load_from_github(self._GITHUB_FILE)
+        return raw if isinstance(raw, dict) else {}
+
+    def _flatten_entries(self, raw: dict) -> list:
         """
-        Call RAG service (TinyLlama-powered) and return structured response
-        
-        Returns:
-            (answer, confidence, sources, processing_time)
+        Convert the nested JSON into a flat list of normalised entry dicts:
+          {
+            category     : "academic" | "administrative",
+            code         : str,   # dept code or office name
+            full_name    : str,
+            email        : str,
+            purpose      : str,
+          }
         """
-        try:
-            # FIXED: Only send what the API accepts
-            payload = {
-                "query": query,
-                "top_k": 5  # Increased for better context
-            }
-            
-            logger.info(f"Calling RAG with query: {query[:50]}...")
-            
-            response = requests.post(
-                RAG_URL = "https://atkiya110-rag-server.hf.space/tinyllama_rag",
-                json=payload,
-                timeout=500
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                # FIXED: Use correct field names from FastAPI QueryResponse
-                answer = data.get("response", "")  # NOT "answer"
-                confidence = float(data.get("confidence", 0.0))
-                sources = data.get("sources", [])
-                processing_time = data.get("processing_time", 0.0)
-                
-                logger.info(
-                    f"RAG response received - Confidence: {confidence:.2f}, "
-                    f"Time: {processing_time:.2f}s, Sources: {len(sources)}"
-                )
-                
-                return answer, confidence, sources, processing_time
-            
-            else:
-                logger.error(f"RAG service error: {response.status_code} - {response.text}")
-                return (
-                    "I'm having trouble connecting to my knowledge base.",
-                    0.0,
-                    [],
-                    0.0
-                )
-                
-        except requests.Timeout:
-            logger.error("RAG service timeout")
-            return (
-                "The request is taking too long. Please try again.",
-                0.0,
-                [],
-                0.0
-            )
-        except requests.ConnectionError:
-            logger.error("RAG service connection error")
-            return (
-                "I can't connect to the answer service. Please try again later.",
-                0.0,
-                [],
-                0.0
-            )
-        except Exception as e:
-            logger.exception(f"Unexpected RAG error: {e}")
-            return (
-                "Something went wrong while processing your question.",
-                0.0,
-                [],
-                0.0
-            )
-    
-    def _send_response(
-        self,
-        dispatcher: CollectingDispatcher,
-        answer: str,
-        confidence: float,
-        sources: List[str],
-        processing_time: float
-    ):
+        entries = []
+        helpdesks = raw.get("department_helpdesks", {})
+
+        for val in helpdesks.get("academic_departments", {}).values():
+            if not isinstance(val, dict):
+                continue
+            entries.append({
+                "category":  "academic",
+                "code":      val.get("department", "").strip(),
+                "full_name": val.get("full_name", "").strip(),
+                "email":     val.get("email", "").strip(),
+                "purpose":   "",
+            })
+
+        for key, val in helpdesks.get("administrative_offices", {}).items():
+            if not isinstance(val, dict):
+                continue
+            entries.append({
+                "category":  "administrative",
+                "code":      val.get("office", key).strip(),
+                "full_name": val.get("office", key).strip(),
+                "email":     val.get("email", "").strip(),
+                "purpose":   val.get("purpose", "").strip(),
+                "_key":      key.lower(),   # original JSON key for alias lookup
+            })
+
+        return entries
+
+    def _find_match(self, user_message: str, entries: list):
         """
-        Send response to user with appropriate formatting based on confidence
-        
-        Confidence levels:
-        - >= 0.7: High confidence - send answer with sources
-        - 0.5-0.7: Medium confidence - send answer with disclaimer
-        - < 0.5: Low confidence - suggest contacting admissions
+        Return the first entry that matches the user message, or None.
+
+        Matching strategy (in priority order):
+          1. Full-name substring match (safe — names are long enough).
+          2. Whole-word code match via \\b regex  ← fixes the CE/office bug.
+          3. Admin alias lookup for common spelling variants
+             (e.g. "register" -> Registrar).
+
+        A plain `code in user_message` check is deliberately NOT used because
+        short codes such as "CE", "ICS", "COE" are common substrings of
+        ordinary English words ("office", "voice", "science", etc.).
         """
-        
-        if not answer or confidence < 0.4:
-            # Very low confidence - direct to admissions
-            dispatcher.utter_message(
-                text=(
-                    "I don't have reliable information about this. "
-                    "For accurate details, please contact:\n"
-                    " admissions@ewubd.edu\n"
-                )
-            )
-        
-        elif confidence < 0.2:
-            # Low-medium confidence - answer with strong disclaimer
-            dispatcher.utter_message(
-                text=f" {answer}\n\n"
-                     "Note: I'm not entirely confident about this answer. "
-                     "Please verify with admissions@ewubd.edu"
-            )
-        
-        elif confidence < 0.3:
-            # Medium confidence - answer with mild disclaimer
-            dispatcher.utter_message(text=answer)
-            dispatcher.utter_message(
-                text=" For confirmation, you can contact admissions@ewubd.edu"
-            )
-        
-        else:
-            # High confidence - send clean answer
-            dispatcher.utter_message(text=answer)
-            
-            # Add sources for transparency (only show top 2)
-            if sources:
-                unique_sources = sorted(set(sources))[:2]
-                source_names = [s.replace('.json', '').replace('_', ' ').title() 
-                               for s in unique_sources]
-                
-                dispatcher.utter_message(
-                    text=f" Source: {', '.join(source_names)}"
-                )
-        
-        # Log performance (for monitoring)
-        logger.info(
-            f"Response sent - Confidence: {confidence:.2f}, "
-            f"Time: {processing_time:.2f}s"
+        import re
+
+        msg = user_message.lower()
+
+        for entry in entries:
+            full_name_lower = entry["full_name"].lower()
+
+            # 1. Full-name match (length makes false positives very unlikely)
+            if full_name_lower and full_name_lower in msg:
+                return entry
+
+            # 2. Whole-word code match
+            code_lower = entry["code"].lower()
+            if code_lower and re.search(r"\b" + re.escape(code_lower) + r"\b", msg):
+                return entry
+
+        # 3. Admin alias lookup
+        for alias, target_key in self._ADMIN_ALIASES.items():
+            if alias in msg:
+                for entry in entries:
+                    if entry.get("_key") == target_key or entry["code"].lower() == target_key:
+                        return entry
+
+        return None
+
+    # ── main run ──────────────────────────────────────────────────────────────
+
+    def run(self, dispatcher, tracker, domain):
+        lang         = get_user_language(tracker)
+        user_message = tracker.latest_message.get("text", "").lower()
+        logger.info(f"[action_get_helpdesk_contacts] lang={lang}")
+
+        raw = self._load_raw()
+        if not raw:
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
+
+        entries = self._flatten_entries(raw)
+        if not entries:
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
+
+        # -- specific department/office match --
+        matched = self._find_match(user_message, entries)
+        if matched:
+            msg  = f"EWU Helpdesk - {matched['full_name']}\n\n"
+            msg += f"Dept/Office : {matched['code']}\n"
+            msg += f"Email       : {matched['email']}\n"
+            if matched.get("purpose"):
+                msg += f"Purpose     : {matched['purpose']}\n"
+            dispatcher.utter_message(text=_lang_wrap(msg, lang))
+            return []
+
+        # -- no specific match: show all contacts --
+        academic = [e for e in entries if e["category"] == "academic"]
+        admin    = [e for e in entries if e["category"] == "administrative"]
+
+        msg = "EWU Helpdesk Contacts\n\nAcademic Departments:\n"
+        for e in academic:
+            msg += f"   - {e['full_name']} ({e['code']})\n"
+            msg += f"     Email: {e['email']}\n"
+
+        msg += "\nAdministrative Offices:\n"
+        for e in admin:
+            msg += f"   - {e['full_name']} ({e['code']})\n"
+            msg += f"     Email: {e['email']}\n"
+            if e.get("purpose"):
+                msg += f"     Purpose: {e['purpose']}\n"
+
+        msg += (
+            "\nFor general enquiries:\n"
+            "   https://www.ewubd.edu | admissions@ewubd.edu | 09666775577"
         )
-    
-    def _build_history(self, tracker: Tracker) -> str:
-        """
-        Extract last 3 conversation turns (for future use)
+        dispatcher.utter_message(text=_lang_wrap(msg, lang))
+        return []
+
+class ActionGetAdmissionDeadlines(Action):
+    def name(self): return "action_get_admission_deadlines"
+
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
+
+        raw_list = DATA.get("admission_deadlines") or fetch_api_data("admission-deadlines")
+        if not raw_list:
+            dispatcher.utter_message(
+                text=_lang_wrap(
+                    "Admission deadline info unavailable. "
+                    "Contact admissions@ewubd.edu or call 09666775577.",
+                    lang,
+                )
+            )
+            return []
+
+        programs = [p for p in raw_list if isinstance(p, dict)]
+        if not programs:
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
+
+        user_message = tracker.latest_message.get("text", "").lower()
+
+        ug_list   = [p for p in programs if p.get("level", "").lower() == "undergraduate"]
+        grad_list = [p for p in programs if p.get("level", "").lower() in ("graduate", "postgraduate")]
+
+        def has_keyword(text, keywords):
+            return any(re.search(r'\b' + re.escape(kw.strip()) + r'\b', text) for kw in keywords)
         
-        Note: Current RAG API doesn't use history yet, but keeping
-        this for potential future enhancement
-        """
-        events = tracker.events
-        history = []
-        
-        for event in reversed(events[-12:]):  # Look at more events
-            if event.get("event") == "user":
-                text = event.get("text", "")
-                if text and text.strip():
-                    history.append(f"User: {text}")
-            elif event.get("event") == "bot":
-                text = event.get("text", "")
-                # Skip system messages
-                if text and not text.startswith(("", "", "")):
-                    history.append(f"Bot: {text}")
-            
-            # Stop once we have 3 full exchanges
-            if len(history) >= 6:
+        wants_grad = has_keyword(user_message, [
+            "masters", "master", "graduate", "postgraduate", "ms", "mba", "emba", "mss", "ma"
+        ])
+        wants_ug = has_keyword(user_message, [
+            "undergraduate", "bsc", "bba", "ba", "llb", "bachelor"
+        ])
+
+        pool = grad_list if wants_grad else (ug_list if wants_ug else ug_list + grad_list)
+
+        def match_program(p):
+            haystack = " ".join([
+                p.get("program", ""),
+                p.get("department", ""),
+                p.get("department_code", ""),
+            ]).lower()
+            tokens = [t for t in user_message.split() if len(t) >= 2]
+            return any(tok in haystack for tok in tokens)
+
+        matched     = [p for p in pool if match_program(p)]
+        sem         = programs[0].get("semester", "")
+        message     = f"EWU Admission Deadlines{' — ' + sem if sem else ''}\n\n"
+        render_list = matched if matched else (pool or programs)
+
+        if matched or len(render_list) <= 30:
+            for p in render_list:
+                name = p.get("program") or p.get("department") or "N/A"
+                message += f" {name}\n"
+                if p.get("application_deadline"):
+                    message += f"    Application Deadline : {p['application_deadline']}\n"
+                if p.get("admission_test_date"):
+                    message += f"    Admission Test       : {p['admission_test_date']}\n"
+                if p.get("result_date"):
+                    message += f"    Result               : {p['result_date']}\n"
+                message += "\n"
+        else:
+            if ug_list:
+                message += " Undergraduate:\n"
+                for p in ug_list:
+                    name = p.get("program") or p.get("department") or "N/A"
+                    dl   = p.get("application_deadline", "N/A")
+                    message += f"   • {name} — {dl}\n"
+                message += "\n"
+            if grad_list:
+                message += " Graduate:\n"
+                for p in grad_list:
+                    name = p.get("program") or p.get("department") or "N/A"
+                    dl   = p.get("application_deadline", "N/A")
+                    message += f"   • {name} — {dl}\n"
+
+        dispatcher.utter_message(text=_lang_wrap(message.strip(), lang))
+        return []
+
+
+class ActionGetAdmissionRequirements(Action):
+    def name(self): return "action_get_admission_requirements"
+
+    def run(self, dispatcher, tracker, domain):
+        data = DATA.get("admission_requirements") or load_from_github(
+            GITHUB_DATA_SOURCES.get("admission_requirements", "dynamic_admission_requirements.json")
+        )
+        if not data:
+            utter_smart(dispatcher, tracker, text="Admission requirement information is unavailable.")
+            return []
+
+        user_message = tracker.latest_message.get("text", "").lower()
+        reqs    = data.get("admission_requirements", {})
+        message = " EWU Admission Requirements\n\n"
+
+        wants_graduate = any(kw in user_message for kw in ["masters","master","ms","mba","graduate","emba"])
+
+        dept_keywords = {
+            "cse": "cse", "ice": "ice", "eee": "eee",
+            "civil": "civil", "geb": "geb",
+            "pharmacy": "bpharm", "math": "mathematics",
+            "data science": "data_science",
+        }
+        dept_key = None
+        for kw, key in dept_keywords.items():
+            if kw in user_message:
+                dept_key = key
                 break
-        
-        return "\n".join(reversed(history[-6:]))
+
+        # ── graduate ──────────────────────────────────────────────────────────
+        if wants_graduate:
+            grad = reqs.get("graduate", {}).get("mba_emba", {})
+            message += " Graduate (Masters / MS / MBA) Requirements:\n"
+            message += f"  Bachelor's Degree: {grad.get('degree')}\n"
+            message += f"  SSC & HSC GPA: {grad.get('ssc_hsc_gpa')}\n"
+            message += "  Admission Test: Required (exemptions available)\n"
+            if "emba" in user_message:
+                message += f"  EMBA Experience: {grad.get('emba', {}).get('work_experience')}\n"
+            utter_smart(dispatcher, tracker, text=message)
+            return []
+
+        # ── undergraduate – specific department ───────────────────────────────
+        ug = reqs.get("undergraduate", {}).get("general_programs_except_bpharm", {})
+        if dept_key and "subject_requirements" in ug:
+            subject_req = ug["subject_requirements"].get(dept_key)
+            if subject_req:
+                message += f" Undergraduate – {dept_key.upper()} Requirements:\n"
+                message += f"  Subject Requirement: {subject_req}\n"
+                message += f"  SSC & HSC: {ug.get('ssc_hsc')}\n"
+                message += f"  Admission Test Weight: {ug.get('admission_test', {}).get('weightage')}\n"
+                utter_smart(dispatcher, tracker, text=message)
+                return []
+
+        # ── show all ──────────────────────────────────────────────────────────
+        message += " Undergraduate (General):\n"
+        message += f"  SSC & HSC: {ug.get('ssc_hsc')}\n"
+        message += f"  Diploma: {ug.get('diploma')}\n"
+        message += "  O & A Level: Passed O-Level (5) & A-Level (2)\n\n"
+
+        grad = reqs.get("graduate", {}).get("mba_emba", {})
+        message += " Graduate:\n"
+        message += "  Bachelor's Degree Required\n"
+        message += f"  Min SSC & HSC GPA: {grad.get('ssc_hsc_gpa')}\n\n"
+
+        message += " Required Documents:\n"
+        for doc_item in reqs.get("required_documents", []):
+            message += f"  • {doc_item}\n"
+
+        utter_smart(dispatcher, tracker, text=message)
+        return []
 
 
-# class ActionDefaultFallback(Action):
-#     """Fallback to RAG for unrecognized intents"""
-    
-#     def name(self) -> Text:
-#         return "action_default_fallback"
-    
-#     def run(
-#         self,
-#         dispatcher: CollectingDispatcher,
-#         tracker: Tracker,
-#         domain: Dict[Text, Any],
-#     ) -> List[Dict[Text, Any]]:
-        
-#         user_message = tracker.latest_message.get("text", "")
-        
-#         logger.info(f"Fallback triggered for: {user_message}")
-        
-#         # Try RAG for unrecognized intents
-#         rag_action = ActionPhi3RagAnswer()
-#         return rag_action.run(dispatcher, tracker, domain)
+class ActionGetConductRules(Action):
+    def name(self): return "action_get_conduct_rules"
+
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
+
+        doc = _get_document("student-rules")
+        if not doc or not isinstance(doc, dict):
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
+
+        r   = doc.get("content", {})
+        msg = " EWU General Conduct Rules\n\n✅ Expected Behavior:\n"
+        for rule in r.get("general_conduct_rules", {}).get("expected_behavior", []):
+            msg += f"  • {rule}\n"
+        msg += "\n Academic Misconduct (Zero Tolerance):\n"
+        for ex in r.get("academic_misconduct", {}).get("examples", []):
+            msg += f"  • {ex}\n"
+        msg += "\n Social Misconduct:\n"
+        for ex in r.get("social_misconduct", {}).get("examples", []):
+            msg += f"  • {ex}\n"
+
+        dispatcher.utter_message(text=_lang_wrap(msg.strip(), lang))
+        return []
+
+
+class ActionGetClubsSocieties(Action):
+    def name(self): return "action_get_clubs_societies"
+
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
+
+        clubs_raw = DATA.get("clubs") or fetch_api_data("clubs")
+        clubs = (
+            clubs_raw if isinstance(clubs_raw, list)
+            else clubs_raw.get("clubs", []) if isinstance(clubs_raw, dict)
+            else []
+        )
+        if not clubs:
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
+
+        message = " EWU Clubs and Societies:\n\n"
+        for i, club in enumerate(clubs, start=1):
+            message += f"{i}. {club.get('name','Unknown Club')}\n"
+            if club.get("description"):
+                message += f"    {club.get('description')}\n"
+            if club.get("url"):
+                message += f"    {club.get('url')}\n"
+            message += "\n"
+
+        dispatcher.utter_message(text=_lang_wrap(message, lang))
+        return []
+
+
+class ActionGetAlumniInfo(Action):
+    def name(self): return "action_get_alumni_info"
+
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
+
+        alumni_list = DATA.get("alumni") or fetch_api_data("alumni")
+        if not alumni_list:
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
+
+        message = f" EWU Alumni Network\n\nNotable Alumni: {len(alumni_list)}\n\n"
+        for alum in alumni_list:
+            if not isinstance(alum, dict):
+                continue
+            message += f"• {alum.get('name','Unknown')}"
+            if alum.get("department"):
+                message += f" ({alum.get('department')})"
+            message += "\n"
+            if alum.get("achievement"):
+                message += f"  Achievement: {alum.get('achievement')}\n"
+            pos_co = " / ".join(filter(None, [alum.get("position",""), alum.get("company","")]))
+            if pos_co:
+                message += f"  Position: {pos_co}\n"
+            message += "\n"
+
+        dispatcher.utter_message(text=_lang_wrap(message, lang))
+        return []
+
+
+class ActionGetEvents(Action):
+    def name(self): return "action_get_events"
+
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
+
+        events = DATA.get("events") or fetch_api_data("events")
+        if not events:
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
+
+        message = " EWU Recent Events:\n\n"
+        for ev in events[:10]:
+            message += f"🔹 {ev.get('title','N/A')}\n"
+            if ev.get("event_date"):
+                message += f"    {ev.get('event_date')}\n"
+            if ev.get("location"):
+                message += f"    {ev.get('location')}\n"
+            message += "\n"
+
+        dispatcher.utter_message(text=_lang_wrap(message.strip(), lang))
+        return []
+
+
+class ActionGetNotices(Action):
+    def name(self): return "action_get_notices"
+
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
+
+        notices = DATA.get("notices") or fetch_api_data("notices")
+        if not notices:
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
+
+        message = " EWU Latest Notices:\n\n"
+        for n in notices[:10]:
+            message += f"• {n.get('title','N/A')}\n"
+            if n.get("published_date"):
+                message += f"   {n.get('published_date')}\n"
+            if n.get("url"):
+                message += f"   {n.get('url')}\n"
+            message += "\n"
+
+        dispatcher.utter_message(text=_lang_wrap(message.strip(), lang))
+        return []
+
+
+class ActionGetGovernance(Action):
+    def name(self): return "action_get_governance"
+
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
+        user_message = tracker.latest_message.get("text", "").lower()
+
+        body_map = {
+            "board of trustees": "board_of_trustees",
+            "board":             "board_of_trustees",
+            "syndicate":         "syndicate",
+            "academic council":  "academic_council",
+            "academic":          "academic_council",
+        }
+        body_filter = next((v for k, v in body_map.items() if k in user_message), None)
+
+        all_members = DATA.get("governance") or fetch_api_data("governance")
+        if not all_members:
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
+
+        # filter in-memory instead of passing params to the API
+        members = (
+            [m for m in all_members if m.get("body") == body_filter]
+            if body_filter else all_members
+        )
+        if not members:
+            members = all_members  # fallback to all if filter yields nothing
+
+        grouped: Dict[str, List] = {}
+        for m in members:
+            grouped.setdefault(m.get("body", "Other"), []).append(m)
+
+        msg = " EWU Governance:\n\n"
+        for body, bm in grouped.items():
+            msg += f" {body.replace('_',' ').title()}:\n"
+            for m in bm:
+                msg += (
+                    f"  • {m.get('name','N/A')} — {m.get('role','N/A')}"
+                    f"{'  (Chairperson)' if m.get('is_chairperson') else ''}\n"
+                )
+            msg += "\n"
+
+        dispatcher.utter_message(text=_lang_wrap(msg.strip(), lang))
+        return []
+
+
+class ActionGetPartnerships(Action):
+    def name(self): return "action_get_partnerships"
+
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
+
+        partnerships = DATA.get("partnerships") or fetch_api_data("partnerships")
+        if not partnerships:
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
+
+        msg = " EWU International Partnerships:\n\n"
+        for p in partnerships:
+            msg += f" {p.get('name','N/A')}"
+            if p.get("acronym"):
+                msg += f" ({p.get('acronym')})"
+            msg += "\n"
+            if p.get("country"):
+                msg += f"   Country: {p.get('country')}\n"
+            if p.get("partnership_type"):
+                msg += f"   Partnership: {p.get('partnership_type')}\n"
+            msg += "\n"
+
+        dispatcher.utter_message(text=_lang_wrap(msg.strip(), lang))
+        return []
+
+
+class ActionGetNewsletters(Action):
+    def name(self): return "action_get_newsletters"
+
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
+
+        newsletters = DATA.get("newsletters") or fetch_api_data("newsletters")
+        if not newsletters:
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
+
+        msg = " EWU Newsletters:\n\n"
+        for n in newsletters[:10]:
+            msg += f"• {n.get('title','N/A')}"
+            if n.get("semester"):
+                msg += f" — {n.get('semester')}"
+            if n.get("year"):
+                msg += f" ({n.get('year')})"
+            msg += "\n"
+            if n.get("pdf_url"):
+                msg += f"   {n.get('pdf_url')}\n"
+            msg += "\n"
+
+        dispatcher.utter_message(text=_lang_wrap(msg.strip(), lang))
+        return []
+
+
+class ActionGetProctorSchedule(Action):
+    def name(self): return "action_get_proctor_schedule"
+
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
+
+        schedule = DATA.get("proctor_schedule") or fetch_api_data("proctor-schedule")
+        if not schedule:
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
+
+        grouped: Dict[str, List] = {}
+        for entry in schedule:
+            grouped.setdefault(entry.get("day_of_week", "Unknown"), []).append(entry)
+
+        day_order = ["Saturday","Sunday","Monday","Tuesday","Wednesday","Thursday","Friday"]
+        msg = " EWU Proctor Schedule:\n\n"
+        for day in day_order:
+            if day in grouped:
+                msg += f" {day}:\n"
+                for e in grouped[day]:
+                    msg += (
+                        f"  • {e.get('name','N/A')} "
+                        f"({e.get('designation','N/A')}, {e.get('department','N/A')})\n"
+                    )
+                msg += "\n"
+
+        dispatcher.utter_message(text=_lang_wrap(msg.strip(), lang))
+        return []
+
+
+class ActionGetAcademicCalendar(Action):
+    def name(self): return "action_get_academic_calendar"
+
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
+        user_message = tracker.latest_message.get("text", "").lower()
+
+        wants_exam = "exam" in user_message
+        calendar_type = "exam_schedule" if wants_exam else "academic_calendar"
+
+        # Filter preloaded data by calendar_type when the field is present;
+        # otherwise use the full list (the API may not distinguish them).
+        all_calendar = DATA.get("academic_calendar") or []
+        if isinstance(all_calendar, list) and all_calendar:
+            # Try to filter; fall back to full list if no entries match
+            filtered = [e for e in all_calendar if e.get("calendar_type") == calendar_type]
+            calendar = filtered if filtered else all_calendar
+        else:
+            # Live fallback with params
+            calendar = fetch_api_data(
+                "academic-calendar", params={"calendar_type": calendar_type}
+            )
+
+        if not calendar:
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
+
+        grouped: Dict[str, List] = {}
+        for entry in calendar:
+            grouped.setdefault(entry.get("semester", "Unknown Semester"), []).append(entry)
+
+        label = "Exam Schedule" if wants_exam else "Academic Calendar"
+        msg   = f" EWU {label}:\n\n"
+        for sem, events in list(grouped.items())[:3]:
+            msg += f"🗓 {sem}:\n"
+            for ev in events[:12]:
+                msg += f"  • {ev.get('event_date','N/A')} ({ev.get('day','')}) — {ev.get('event_name','N/A')}\n"
+            if len(events) > 12:
+                msg += f"  … and {len(events)-12} more events\n"
+            msg += "\n"
+
+        dispatcher.utter_message(text=_lang_wrap(msg.strip(), lang))
+        return []
+
+
+class ActionAdmissionApplicationStep(Action):
+    """
+    Walks the user through EWU's official Online Admission Form guidelines.
+    Uses preloaded/GitHub-backed admission_process data when available and
+    falls back to official hardcoded steps otherwise.
+    """
+
+    def name(self): return "action_admission_application_steps"
+
+    def run(self, dispatcher, tracker, domain):
+        process_data = DATA.get("admission_process") or load_from_github(
+            GITHUB_DATA_SOURCES.get("admission_process", "dynamic_admission_process.json")
+        )
+
+        user_message  = tracker.latest_message.get("text", "").lower()
+        wants_graduate = any(kw in user_message for kw in [
+            "masters","master","ms","mba","emba","graduate","postgraduate"
+        ])
+
+        step_keywords = {
+            "document": ["document","paper","certificate","required","photo","photograph","signature","scan"],
+            "test":     ["test","exam","admission test","written","admit card","admit"],
+            "apply":    ["apply","application","form","register","online","submit","fill"],
+            "fee":      ["fee","payment","cost","pay","bkash","tk","taka"],
+            "login":    ["login","sign in","id","login id","ewu id","account"],
+            "result":   ["result","merit","selected","outcome","qualified"],
+        }
+        asked_step = None
+        for step_key, keywords in step_keywords.items():
+            if any(kw in user_message for kw in keywords):
+                asked_step = step_key
+                break
+
+        if process_data and isinstance(process_data, dict):
+            level_key = "graduate" if wants_graduate else "undergraduate"
+            steps = (
+                process_data.get(level_key, {}).get("application_steps")
+                or process_data.get("application_steps")
+                or process_data.get("steps")
+                or []
+            )
+            if not steps and isinstance(process_data, list):
+                steps = process_data
+
+            if steps:
+                level_label = "Graduate" if wants_graduate else "Undergraduate"
+                message = f" EWU {level_label} Admission — Application Steps\n\n"
+                shown_any = False
+
+                for i, step in enumerate(steps, start=1):
+                    if isinstance(step, dict):
+                        title    = step.get("step") or step.get("title") or step.get("name") or f"Step {i}"
+                        detail   = step.get("description") or step.get("details") or step.get("info") or ""
+                        deadline = step.get("deadline") or step.get("date") or ""
+                        note     = step.get("note") or step.get("notes") or ""
+
+                        if asked_step:
+                            combined = f"{title} {detail}".lower()
+                            if not any(kw in combined for kw in step_keywords[asked_step]):
+                                continue
+
+                        shown_any  = True
+                        message   += f"{'—' * 30}\n"
+                        message   += f"Step {i}: {title}\n"
+                        if detail:    message += f"   {detail}\n"
+                        if deadline:  message += f"   Deadline: {deadline}\n"
+                        if note:      message += f"   Note: {note}\n"
+                        message   += "\n"
+                    else:
+                        shown_any  = True
+                        message   += f"Step {i}: {step}\n\n"
+
+                if shown_any:
+                    contact = process_data.get("contact") or process_data.get("contact_information") or {}
+                    if contact:
+                        message += " Admission Office:\n"
+                        if contact.get("phone"):   message += f"   Phone : {contact['phone']}\n"
+                        if contact.get("email"):   message += f"   Email : {contact['email']}\n"
+                        if contact.get("website"): message += f"   Web   : {contact['website']}\n"
+                    else:
+                        message += (
+                            " Admission Office:\n"
+                            "   Phone : 55046678, 09666775577 | Mobile: 01755587224\n"
+                            "   Email : admissions@ewubd.edu\n"
+                            "   Web   : http://admission.ewubd.edu\n"
+                        )
+                    utter_smart(dispatcher, tracker, text=message.strip())
+                    return []
+
+        logger.warning(
+            "[ActionAdmissionApplicationStep] Could not load admission_process data. "
+            "Using official EWU hardcoded guidelines."
+        )
+
+        TOPIC_RESPONSES = {
+            "fee": (
+                " EWU Admission Application Fee\n\n"
+                "• Application Fee: Tk. 1,500/- (Non-Refundable)\n"
+                "• Pay in cash at the EWU Admission Office\n"
+                "• OR pay online via bKash (online processing fee will be charged)\n\n"
+                " Admission Office:\n"
+                "   Address : A/2 Jahurul Islam Avenue, Jahurul Islam City, Aftabnagar, Dhaka\n"
+                "   Phone   : 55046678, 09666775577 | Mobile: 01755587224\n"
+                "   Email   : admissions@ewubd.edu"
+            ),
+            "document": (
+                " EWU Admission — Required Documents and Uploads\n\n"
+                "1. Passport-size Colored Photograph\n"
+                "   • Recent (not older than 6 months)\n"
+                "   • Format: .jpg | Max size: 100 KB\n\n"
+                "2. Scanned Signature\n"
+                "   • Background must be white\n"
+                "   • Format: .jpg | Max size: 60 KB\n\n"
+                "3. During Admission Test and Admission (if qualified):\n"
+                "   • Original HSC / Equivalent Registration Card\n"
+                "   • OR A-Level Statement of Entry\n\n"
+                " Note: If any false or wrong information is detected at any time, "
+                "the application and admission (if qualified) will be cancelled.\n\n"
+                " Admission Office: 55046678, 09666775577 | admissions@ewubd.edu"
+            ),
+            "login": (
+                " EWU Admission — Login and EWU Login ID\n\n"
+                "1. Go to http://admission.ewubd.edu\n"
+                "2. Click 'Create New Applicant' and select your program\n"
+                "3. Fill in your Name, Mobile Number and Email (optional)\n"
+                "4. Your EWU Login ID will be displayed on the next screen\n"
+                "   Example: 163354131\n"
+                "   • Note it down — you will need it for payment and future logins\n"
+                "   • The Login ID is also sent to your email\n"
+                "5. After payment, sign in using your EWU Login ID + Mobile Number\n\n"
+                " Need help? Call: 55046678, 09666775577 | admissions@ewubd.edu"
+            ),
+            "test": (
+                " EWU Admission Test — Admit Card and Instructions\n\n"
+                "• After submitting your Online Admission Form, download and print your Admit Card\n"
+                "• Log in any time using your EWU Login ID + Mobile Number to print the Admit Card\n"
+                "• Without the Admit Card you will NOT be allowed to sit the Admission Test\n\n"
+                "On the day of the test, bring:\n"
+                "   • Printed Admit Card\n"
+                "   • Original HSC / Equivalent Registration Card\n"
+                "   • OR A-Level Statement of Entry\n\n"
+                "The decision of the EWU Admission Committee is final.\n\n"
+                " Admission Office: 55046678, 09666775577 | admissions@ewubd.edu"
+            ),
+            "apply": (
+                " EWU Admission — How to Fill and Submit the Online Form\n\n"
+                "1. Go to http://admission.ewubd.edu\n"
+                "2. Click 'Create New Applicant' then select your program\n"
+                "   • After selecting a program you cannot change it\n"
+                "3. Fill in Name, Mobile Number, Email (optional) then note your EWU Login ID\n"
+                "4. Pay the Application Fee (Tk. 1,500/- cash or bKash)\n"
+                "5. Sign in with EWU Login ID + Mobile Number\n"
+                "6. Complete all fields marked with (*) — mandatory fields\n"
+                "7. Upload Photograph (.jpg, max 100 KB) and Signature (.jpg, max 60 KB)\n"
+                "8. Use <Save> to save progress, <Preview> to review, <Submit Form> to submit\n"
+                "   • After submission the form cannot be edited\n"
+                "9. On success you will see: 'Your form has been submitted successfully.'\n"
+                "   Then click 'Admit Card' to download it\n"
+                "10. Print your Admit Card — required to appear in the Admission Test\n\n"
+                " Admission Office: 55046678, 09666775577 | admissions@ewubd.edu"
+            ),
+        }
+
+        if asked_step and asked_step in TOPIC_RESPONSES:
+            utter_smart(dispatcher, tracker, text=TOPIC_RESPONSES[asked_step])
+            return []
+
+        steps = [
+            (
+                "Access the Online Admission Form",
+                "Open any web browser (Google Chrome or Mozilla Firefox recommended).\n"
+                "   Go to http://www.ewubd.edu OR directly to http://admission.ewubd.edu"
+            ),
+            (
+                "Create a New Applicant Account and Select Program",
+                "Click 'Create New Applicant', then select your desired program by clicking 'Click here to apply'.\n"
+                "   After selecting a program you cannot change it."
+            ),
+            (
+                "Get Your EWU Login ID",
+                "Fill in your Name, Mobile Number, and Email (optional).\n"
+                "   Your EWU Login ID (e.g. 163354131) will appear on the next screen.\n"
+                "   Note it down — you need it for payment and future logins.\n"
+                "   The Login ID is also sent to your email."
+            ),
+            (
+                "Pay the Application Fee",
+                "Application Fee: Tk. 1,500/- (Non-Refundable)\n"
+                "   • Pay in cash at the EWU Admission Office\n"
+                "   • OR pay online via bKash (online processing fee applies)"
+            ),
+            (
+                "Sign In and Fill the Online Admission Form",
+                "After payment, sign in at http://admission.ewubd.edu using your EWU Login ID + Mobile Number.\n"
+                "   • Fill all fields carefully — fields marked (*) are mandatory\n"
+                "   • You are responsible for the correctness of your information\n"
+                "   • Upload Photograph (.jpg, max 100 KB — taken within 6 months)\n"
+                "   • Upload Signature (.jpg, max 60 KB — white background)"
+            ),
+            (
+                "Save, Preview and Submit",
+                "Use the buttons at the bottom of the form:\n"
+                "   <Save>         — Save for later editing\n"
+                "   <Preview>      — Review and download as PDF (strongly recommended before submitting)\n"
+                "   <Submit Form>  — Final submission\n"
+                "   • Once submitted, the form cannot be edited."
+            ),
+            (
+                "Download Your Admit Card",
+                "After successful submission you will see: 'Your form has been submitted successfully. "
+                "For obtaining the Admit Card click on the Admit Card.'\n"
+                "   • Click 'Admit Card' to download and print it\n"
+                "   • You can reprint any time by logging in with your EWU Login ID + Mobile Number\n"
+                "   • Without the Admit Card you will NOT be allowed to sit the Admission Test"
+            ),
+            (
+                "Appear for the Admission Test",
+                "Bring to the test:\n"
+                "   • Printed Admit Card\n"
+                "   • Original HSC / Equivalent Registration Card OR A-Level Statement of Entry\n"
+                "   • The decision of the EWU Admission Committee is final."
+            ),
+        ]
+
+        message = " EWU Online Admission — Step-by-Step Guide\n\n"
+        for i, (title, detail) in enumerate(steps, start=1):
+            message += f"{'—' * 32}\n"
+            message += f"Step {i}: {title}\n"
+            message += f"   {detail}\n\n"
+
+        message += (
+            " Admission Office\n"
+            "   Address : A/2 Jahurul Islam Avenue, Jahurul Islam City, Aftabnagar, Dhaka\n"
+            "   Phone   : 55046678, 09666775577\n"
+            "   Mobile  : 01755587224\n"
+            "   Email   : admissions@ewubd.edu\n"
+            "   Web     : http://admission.ewubd.edu\n\n"
+            "Tip: Ask me about a specific step — e.g. 'How do I pay the fee?' or 'What documents do I need?'"
+        )
+
+        utter_smart(dispatcher, tracker, text=message.strip())
+        return []
 
 
 
 
-import aiohttp  
-import asyncio
+class ActionGetProgramDetails(Action):
+    """
+    Loads program credit totals from static_Programs.json on GitHub and
+    displays: Program Name → Total Credits, grouped by level.
+    """
+
+    def name(self): return "action_get_program_details"
+
+    # Maps top-level JSON keys → display label + emoji
+    _SECTIONS = [
+        ("undergraduate_programs", " Undergraduate Programs", "UG"),
+        ("graduate_programs",      " Graduate Programs",      "Graduate"),
+        ("Diploma Programs",       " Diploma Programs",       "Diploma"),
+    ]
+
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
+        logger.info(f"[action_get_program_details] lang={lang}")
+
+        # ── Load from preloaded GitHub data; live fetch as fallback ──────────
+        raw = DATA.get("static_programs") or load_from_github(
+            GITHUB_DATA_SOURCES["static_programs"]
+        )
+
+        if not raw or not isinstance(raw, dict):
+            dispatcher.utter_message(
+                text=_lang_wrap(
+                    "Program credit information is unavailable right now. "
+                    "Visit https://www.ewubd.edu or contact admissions@ewubd.edu.",
+                    lang,
+                )
+            )
+            return []
+
+        # ── Optional level filter from user message ───────────────────────────
+        user_msg   = tracker.latest_message.get("text", "").lower()
+        wants_grad = any(kw in user_msg for kw in [
+            "graduate", "masters", "master", "mba", "ms", "postgraduate",
+        ])
+        wants_ug   = any(kw in user_msg for kw in [
+            "undergraduate", "bachelor", "bsc", "bba",
+        ])
+        wants_dipl = any(kw in user_msg for kw in ["diploma", "pgd", "ppdm"])
+
+        msg = " EWU Programs — Total Credits\n\n"
+        has_content = False
+
+        for json_key, section_label, level_tag in self._SECTIONS:
+            # Apply level filter
+            if wants_grad  and level_tag not in ("Graduate",):
+                continue
+            if wants_ug    and level_tag != "UG":
+                continue
+            if wants_dipl  and level_tag != "Diploma":
+                continue
+
+            section_data = raw.get(json_key)
+            if not section_data or not isinstance(section_data, dict):
+                continue
+
+            section_lines = []
+            for prog_name, prog_info in section_data.items():
+                if not isinstance(prog_info, dict):
+                    continue
+                # total_credits or total_credit_hours
+                credits = (
+                    prog_info.get("total_credits")
+                    or prog_info.get("total_credit_hours")
+                    or "N/A"
+                )
+                section_lines.append(f"   • {prog_name}\n     Total Credits : {credits}")
+
+            if section_lines:
+                has_content = True
+                msg += f"{section_label}:\n"
+                msg += "\n".join(section_lines)
+                msg += "\n\n"
+
+        if not has_content:
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
+
+        msg += " For more details: admissions@ewubd.edu |  09666775577"
+        dispatcher.utter_message(text=_lang_wrap(msg.strip(), lang))
+        return []
 
 
-logger = logging.getLogger(__name__)
+class ActionGetFacilities(Action):
+    """
+    Parses the nested EWU facilities JSON structure:
+    {
+      "university": "...",
+      "facilities": {
+        "campus_life":          { "available": [...], "not_available": [...] },
+        "ics_services":         { "description": "...", "services": [...] },
+        "research_center":      { "name": "...", "facilities": [...] },
+        "engineering_labs":     { "departments": [...], "labs": [...] },
+        "pharmacy_labs":        { "description": "...", "major_equipment": [...], ... },
+        "civil_engineering_labs": { "labs": [...] }
+      }
+    }
+    """
+
+    def name(self): return "action_get_facilities"
+
+    def run(self, dispatcher, tracker, domain):
+        lang = get_user_language(tracker)
+        logger.info(f"[action_get_facilities] lang={lang}")
+
+        # -- load data (prefer preloaded, fallback to GitHub) --
+        raw = DATA.get("facilities") or load_from_github("dynamic_facilites.json")
+        if not raw or not isinstance(raw, dict):
+            dispatcher.utter_message(
+                text=_lang_wrap(
+                    "Facilities information is unavailable right now. "
+                    "Visit https://www.ewubd.edu for details.",
+                    lang,
+                )
+            )
+            return []
+
+        # -- unwrap top-level structure --
+        facilities_root = raw.get("facilities", raw)
+        if not isinstance(facilities_root, dict):
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
+
+        msg = "EWU Campus Facilities:\n\n"
+        has_content = False
+
+        # -- 1. Campus Life --
+        campus_life = facilities_root.get("campus_life", {})
+        if isinstance(campus_life, dict):
+            available     = campus_life.get("available", [])
+            not_available = campus_life.get("not_available", [])
+
+            if available:
+                has_content = True
+                msg += "Campus Life - Available:\n"
+                for item in available:
+                    if not isinstance(item, dict):
+                        continue
+                    msg += f"   - {item.get('name', 'N/A')}\n"
+                    if item.get("description"):
+                        msg += f"     {item['description']}\n"
+                    if item.get("url"):
+                        msg += f"     {item['url']}\n"
+                msg += "\n"
+
+            if not_available:
+                has_content = True
+                msg += "Campus Life - Not Available:\n"
+                for item in not_available:
+                    if isinstance(item, dict):
+                        msg += f"   - {item.get('name', 'N/A')}: {item.get('description', '')}\n"
+                msg += "\n"
+
+        # -- 2. ICS Services --
+        ics = facilities_root.get("ics_services", {})
+        if isinstance(ics, dict):
+            services = ics.get("services", [])
+            if services:
+                has_content = True
+                msg += f"{ics.get('description', 'ICS Services')}:\n"
+                for svc in services:
+                    msg += f"   - {svc}\n"
+                msg += "\n"
+
+        # -- 3. Research Center --
+        rc = facilities_root.get("research_center", {})
+        if isinstance(rc, dict):
+            rc_facilities = rc.get("facilities", [])
+            if rc_facilities:
+                has_content = True
+                msg += f"{rc.get('name', 'Research Center')}:\n"
+                for fac in rc_facilities:
+                    if not isinstance(fac, dict):
+                        continue
+                    msg += f"   - {fac.get('name', 'N/A')}\n"
+                    desc = fac.get("description", "")
+                    if desc:
+                        msg += f"     {desc[:160].rstrip()}{'...' if len(desc) > 160 else ''}\n"
+                    if fac.get("location"):
+                        msg += f"     Location: {fac['location']}\n"
+                msg += "\n"
+
+        # -- 4. Engineering Labs --
+        eng = facilities_root.get("engineering_labs", {})
+        if isinstance(eng, dict):
+            labs  = eng.get("labs", [])
+            depts = eng.get("departments", [])
+            if labs or depts:
+                has_content = True
+                msg += "Engineering Labs:\n"
+                for dept in depts:
+                    msg += f"   - {dept}\n"
+                if labs:
+                    msg += f"   Total labs: {len(labs)}\n"
+                    for lab in labs:
+                        if isinstance(lab, dict):
+                            msg += f"   - {lab.get('name', 'N/A')}\n"
+                            if lab.get("description"):
+                                msg += f"     {lab['description'][:120]}\n"
+                msg += "\n"
+
+        # -- 5. Pharmacy Labs --
+        pharm = facilities_root.get("pharmacy_labs", {})
+        if isinstance(pharm, dict):
+            if pharm.get("description") or pharm.get("major_equipment"):
+                has_content = True
+                msg += "Pharmacy Labs:\n"
+                if pharm.get("description"):
+                    msg += f"   {pharm['description']}\n"
+                for eq in pharm.get("major_equipment", []):
+                    if isinstance(eq, dict):
+                        msg += f"   - {eq.get('name', 'N/A')}"
+                        if eq.get("description"):
+                            msg += f": {eq['description'][:80]}"
+                        msg += "\n"
+                msg += "\n"
+
+        # -- 6. Civil Engineering Labs --
+        civil = facilities_root.get("civil_engineering_labs", {})
+        if isinstance(civil, dict):
+            labs = civil.get("labs", [])
+            if labs:
+                has_content = True
+                msg += "Civil Engineering Labs:\n"
+                for lab in labs:
+                    if isinstance(lab, dict):
+                        msg += f"   - {lab.get('name', 'N/A')}"
+                        if lab.get("location"):
+                            msg += f"  (Location: {lab['location']})"
+                        msg += "\n"
+                        if lab.get("description"):
+                            msg += f"     {lab['description'][:100]}\n"
+                msg += "\n"
+
+        if not has_content:
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
+
+        msg += (
+            "For more information:\n"
+            "   https://www.ewubd.edu | admissions@ewubd.edu | 09666775577"
+        )
+        dispatcher.utter_message(text=_lang_wrap(msg.strip(), lang))
+        return []
+
+class ActionGetEventDetails(Action):
+    """
+    Keyword-filtered event lookup (distinct from the existing ActionGetEvents
+    which returns a fixed top-10 list).  This action:
+      - lets the user ask for a specific event type (seminar, workshop, fest …)
+      - returns all matching events, not just the first 10
+      - falls back to the full list if no keyword matches
+    """
+
+    def name(self): return "action_get_event_details"
+
+    _EVENT_TYPE_KEYWORDS = {
+        "seminar":   ["seminar", "সেমিনার"],
+        "workshop":  ["workshop", "ওয়ার্কশপ"],
+        "fest":      ["fest", "festival", "উৎসব", "ফেস্ট"],
+        "competition": ["competition", "contest", "প্রতিযোগিতা"],
+        "webinar":   ["webinar", "online event", "ওয়েবিনার"],
+        "cultural":  ["cultural", "সাংস্কৃতিক"],
+        "sports":    ["sport", "game", "খেলা", "ক্রীড়া"],
+    }
+
+    def _detect_type(self, user_message: str) -> str:
+        for etype, keywords in self._EVENT_TYPE_KEYWORDS.items():
+            if any(kw in user_message for kw in keywords):
+                return etype
+        return ""
+
+    def run(self, dispatcher, tracker, domain):
+        lang         = get_user_language(tracker)
+        user_message = tracker.latest_message.get("text", "").lower()
+        logger.info(f"[action_get_event_details] lang={lang}")
+
+        events = DATA.get("events") or fetch_api_data("events")
+        if not events or not isinstance(events, list):
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
+
+        # ── optional type filter ──────────────────────────────────────────────
+        event_type = self._detect_type(user_message)
+        if event_type:
+            filtered = [
+                ev for ev in events
+                if isinstance(ev, dict) and any(
+                    event_type in str(ev.get(field, "")).lower()
+                    for field in ("title", "event_type", "category", "description")
+                )
+            ]
+            events = filtered if filtered else events
+
+        if not events:
+            dispatcher.utter_message(text=_NO_INFO_MSG[lang])
+            return []
+
+        label = f" — {event_type.title()}" if event_type else ""
+        msg   = f" EWU Upcoming Events{label}:\n\n"
+
+        for ev in events:
+            if not isinstance(ev, dict):
+                continue
+            msg += f"🔹 {ev.get('title', 'N/A')}\n"
+            if ev.get("event_date"):
+                msg += f"    Date    : {ev.get('event_date')}\n"
+            if ev.get("location"):
+                msg += f"    Venue   : {ev.get('location')}\n"
+            if ev.get("event_type") or ev.get("category"):
+                msg += f"   🏷️  Type    : {ev.get('event_type') or ev.get('category')}\n"
+            if ev.get("description"):
+                desc = ev["description"]
+                msg += f"    Details : {desc[:180].rstrip()}{'…' if len(desc) > 180 else ''}\n"
+            msg += "\n"
+
+        msg += (
+            " For more info on events:\n"
+            "   https://www.ewubd.edu |  09666775577"
+        )
+        dispatcher.utter_message(text=_lang_wrap(msg.strip(), lang))
+        return []
+
+# ─────────────────────────────────────────────
+# KEYWORD ROUTER + DEFAULT FALLBACK
+# ─────────────────────────────────────────────
+
+def _build_router():
+    """
+    Returns a list of (ActionClass, frozenset[str]) pairs, checked top-to-bottom.
+    Most-specific patterns must come first.
+    """
+    return [
+        (ActionGetLocation, frozenset([
+            "কোথায়","অবস্থিত","ঠিকানা","কোথা","অবস্থান",
+            "kothay","thikana","oboshtit","obosthan",
+            "location","address","where is ewu","situated",
+        ])),
+        (ActionGetEWUHistory, frozenset([
+            "ইতিহাস","প্রতিষ্ঠা","প্রতিষ্ঠিত",
+            "itihas","protishtit","protistha",
+            "history","founded","established",
+        ])),
+        (ActionGetEWUVision, frozenset([
+            "ভিশন","দৃষ্টিভঙ্গি",
+            "vision","bhishon",
+        ])),
+        (ActionGetEWUMission, frozenset([
+            "মিশন","লক্ষ্য",
+            "mission","lakkho",
+        ])),
+        (ActionGetTuitionFees, frozenset([
+            "খরচ","ফি","বেতন","টাকা","ভর্তি ফি",
+            "khoroch","fees","tuition","cost","fee",
+        ])),
+        (ActionGetScholarships, frozenset([
+            "বৃত্তি","স্কলারশিপ",
+            "britti","scholarship","waiver",
+        ])),
+        (ActionAdmissionApplicationStep, frozenset([
+            "apply online","application process","application steps","how to apply",
+            "online admission","admission form","admit card","login id",
+            "ভর্তি আবেদন","আবেদনের ধাপ","কিভাবে আবেদন","অনলাইন ভর্তি",
+        ])),
+        (ActionGetAdmissionDeadlines, frozenset([
+            "ভর্তির সময়সীমা","আবেদনের শেষ তারিখ","ডেডলাইন",
+            "deadline","last date","admission date",
+        ])),
+        (ActionGetAdmissionRequirements, frozenset([
+            "ভর্তির যোগ্যতা","ভর্তির শর্ত","ভর্তি হতে",
+            "requirements","eligibility","admit",
+        ])),
+        (ActionGetCourses, frozenset([
+            "কোর্স","বিষয়",
+            "course","subject","curriculum",
+        ])),
+        (ActionGetPrograms, frozenset([
+            "প্রোগ্রাম","বিভাগ",
+            "program","programme","department",
+        ])),
+        (ActionGetGradingSystem, frozenset([
+            "গ্রেড","জিপিএ","সিজিপিএ",
+            "grade","gpa","cgpa","marking",
+        ])),
+        (ActionGetAcademicCalendar, frozenset([
+            "একাডেমিক ক্যালেন্ডার","পরীক্ষার সময়সূচি",
+            "calendar","exam schedule","academic calendar",
+        ])),
+        (ActionGetClubsSocieties, frozenset([
+            "ক্লাব","সংগঠন",
+            "club","society","extracurricular",
+        ])),
+        (ActionGetAlumniInfo, frozenset([
+            "অ্যালামনাই","প্রাক্তন শিক্ষার্থী",
+            "alumni","alumnus","graduate student",
+        ])),
+        (ActionGetEvents, frozenset([
+            "ইভেন্ট","অনুষ্ঠান",
+            "event","program schedule",
+        ])),
+        (ActionGetNotices, frozenset([
+            "নোটিশ","বিজ্ঞপ্তি",
+            "notice","announcement",
+        ])),
+        (ActionGetGovernance, frozenset([
+            "গভর্ন্যান্স","বোর্ড","সিন্ডিকেট","একাডেমিক কাউন্সিল",
+            "governance","board of trustees","syndicate","academic council",
+        ])),
+        (ActionGetHelpdeskContacts, frozenset([
+            "হেল্পডেস্ক","যোগাযোগ","ফোন নম্বর",
+            "helpdesk","contact","phone number",
+        ])),
+        (ActionGetPartnerships, frozenset([
+            "পার্টনারশিপ","চুক্তি",
+            "partnership","collaboration","mou",
+        ])),
+        (ActionGetProctorSchedule, frozenset([
+            "প্রক্টর","শৃঙ্খলা",
+            "proctor","disciplin",
+        ])),
+        (ActionGetSocialMedia, frozenset([
+            "সোশ্যাল মিডিয়া","ফেসবুক",
+            "social media","facebook","linkedin","instagram",
+        ])),
+        (ActionGetConductRules, frozenset([
+            "নিয়মকানুন","আচরণবিধি",
+            "conduct","rules","regulation",
+        ])),
+        (ActionGetNewsletters, frozenset([
+            "নিউজলেটার",
+            "newsletter",
+        ])),
+        (ActionListDepartments, frozenset([
+            "বিভাগসমূহ","বিভাগগুলো",
+            "departments","faculties",
+        ])),
+        (ActionGetProgramDetails, frozenset([
+            "ক্রেডিট","কত ক্রেডিট","মেয়াদ","সময়কাল",
+            "credit","duration","how long","total credits","program duration",
+        ])),
+        (ActionGetFacilities, frozenset([
+            "সুবিধা","ক্যাম্পাস সুবিধা","ল্যাব","লাইব্রেরি","ক্যাফেটেরিয়া","হোস্টেল", "চিকিৎসা",
+            "facilities","facility","lab","library","cafeteria","transport","gym","hostel", "medical", "checkup",
+        ])),
+        (ActionGetEventDetails, frozenset([
+            "ইভেন্ট","অনুষ্ঠান","আসন্ন ইভেন্ট","সেমিনার","ওয়ার্কশপ",
+            "event","events","upcoming event","seminar","workshop","fest",
+        ])),
+    ]
+
+
+
+
 
 
 class ActionDefaultFallback(Action):
-    """RAG fallback with async support"""
-    
-    def name(self) -> Text:
+    def name(self):
         return "action_default_fallback"
-    
+
     def __init__(self):
-        self.rag_url = "https://atkiya110-rag-server.hf.space/tinyllama_rag"
-        self.timeout = 60
-    
-    async def run(  #  Make it async
-        self,
-        dispatcher: CollectingDispatcher,
-        tracker: Tracker,
-        domain: Dict[Text, Any]
-    ) -> List[Dict[Text, Any]]:
-        
-        user_message = tracker.latest_message.get('text', '').strip()
-        
-        if not user_message:
-            dispatcher.utter_message(text="I didn't catch that. Could you rephrase?")
-            return []
-        
-        logger.info(f"RAG Fallback: '{user_message}'")
-        
-        try:
-            #  Use async HTTP client
-            timeout = aiohttp.ClientTimeout(total=self.timeout)
-            
-            async with aiohttp.ClientSession(timeout=timeout) as session:
-                payload = {
-                    "query": user_message,
-                    "use_llm": True,
-                    "top_k": 5,
-                    "use_cache": True
-                }
-                
-                async with session.post(self.rag_url, json=payload) as response:
-                    if response.status == 200:
-                        result = await response.json()
-                        
-                        answer = result.get('response', 'Sorry, no answer found.')
-                        confidence = result.get('confidence', 0)
-                        
-                        logger.info(f"RAG success: confidence={confidence:.2f}")
-                        
-                        # Send response
-                        dispatcher.utter_message(text=answer)
-                        
-                        # Low confidence warning
-                        if confidence < 0.4:
-                            dispatcher.utter_message(
-                                text="Please visit https://www.ewubd.edu or contact admissions for more information."
-                            )
-                    else:
-                        logger.error(f"RAG returned status {response.status}")
-                        dispatcher.utter_message(
-                            text="Sorry. I'm having technical issues."
-                        )
-            
-            return []
-            
-        except asyncio.TimeoutError:
-            logger.error(f"RAG timeout after {self.timeout}s")
-            dispatcher.utter_message(
-                text="Search took too long. Try a simpler question."
-            )
-            return []
-        
-        except aiohttp.ClientConnectorError:
-            logger.error(f"Cannot connect to RAG at {self.rag_url}")
-            dispatcher.utter_message(
-                text="Connection issue. Please try again later"
-            )
-            return []
-        
-        except Exception as e:
-            logger.error(f"Error: {e}", exc_info=True)
-            dispatcher.utter_message(
-                text="Something went wrong. Please rephrase your question."
-            )
-            return []
+        self._router = _build_router()
 
-
-
-
-
-
-
-
-
-
-
-
-
-# ============================================================================
-# DEPARTMENT TO FILE MAPPING
-# ============================================================================
-
-DEPARTMENT_FILES = {
-    # Undergraduate
-    "cse": "st_cse.json",
-    "computer science": "st_cse.json",
-    "cs": "st_cse.json",
-    
-    "eee": "st_eee.json",
-    "electrical": "st_eee.json",
-    
-    "ece": "st_ece.json",
-    "electronics": "st_ece.json",
-    
-    "ce": "st_ce.json",
-    "civil": "st_ce.json",
-    
-    "bba": "st_ba.json",
-    "business": "st_ba.json",
-    
-    "economics": "st_economics.json",
-    "eco": "st_economics.json",
-    
-    "english": "st_english.json",
-    "eng": "st_english.json",
-    
-    "pharmacy": "st_pharmacy.json",
-    "pharm": "st_pharmacy.json",
-    
-    "law": "st_law.json",
-    
-    "math": "st_math.json",
-    "mathematics": "st_math.json",
-    
-    "sociology": "st_sociology.json",
-    "soc": "st_sociology.json",
-    
-    "social relations": "st_social_relations.json",
-    
-    # Graduate
-    "mba": "mba_emba.json",
-    "emba": "mba_emba.json",
-    
-    "ms cse": "ms_cse.json",
-    "msc cse": "ms_cse.json",
-    
-    "ms dsa": "ms_dsa.json",
-    "data science": "ms_dsa.json",
-    
-    "ma english": "ma_english.json",
-    
-    "mds": "mds.json",
-    "development studies": "mds.json",
-    
-    "mss economics": "mss_eco.json",
-    "mss eco": "mss_eco.json",
-    
-    "mphil pharmacy": "mphil_pharmacy.json",
-    
-    "tesol": "tesol.json",
-}
-
-
-def normalize_department_name(dept_name: str) -> str:
-    """Normalize department name to match DEPARTMENT_FILES keys"""
-    
-    if not dept_name:
-        return ""
-    
-    # Convert to lowercase and strip
-    dept = dept_name.lower().strip()
-    
-    # Mapping of variations to standard keys
-    dept_mappings = {
-        # CSE variations
-        "computer science and engineering": "cse",
-        "computer science & engineering": "cse",
-        "computer science": "cse",
-        "comp sci": "cse",
-        "cs": "cse",
-        "cse": "cse",
-        
-        # EEE variations
-        "electrical and electronics engineering": "eee",
-        "electrical & electronics engineering": "eee",
-        "electrical and electronics": "eee",
-        "electrical engineering": "eee",
-        "electrical": "eee",
-        "electrical and electronic engineering" 
-        "eee": "eee",
-        
-        # ECE variations
-        "electronics and communication engineering": "ece",
-        "electronics & communication engineering": "ece",
-        "electronics and communication": "ece",
-        "electronics": "ece",
-        "ece": "ece",
-        
-        # Civil variations
-        "civil engineering": "civil",
-        "civil": "civil",
-        "ce": "civil",
-        
-        # BBA variations
-        "business administration": "bba",
-        "business": "bba",
-        "bba": "bba",
-        "ba": "bba",
-        
-        # Economics
-        "economics": "economics",
-        "eco": "economics",
-        
-        # English
-        "english": "english",
-        "eng": "english",
-        
-        # Pharmacy
-        "pharmacy": "pharmacy",
-        "pharm": "pharmacy",
-        
-        # Law
-        "law": "law",
-        
-        # Math
-        "mathematics": "math",
-        "math": "math",
-        
-        # Sociology
-        "sociology": "sociology",
-        "soc": "sociology",
-        
-        # Graduate
-        "mba": "mba",
-        "emba": "emba",
-        "ms cse": "ms cse",
-        "msc cse": "ms cse",
-        "master of science in cse": "ms cse",
-        "ms data science": "ms dsa",
-        "data science": "ms dsa",
-    }
-    
-    # Return mapped value or original lowercase
-    return dept_mappings.get(dept, dept)
-
-
-
-
-# ============================================================================
-# ACTION: Show All Courses
-# ============================================================================
-
-class ActionShowCourses(Action):
-    """Show all courses for a department"""
-    
-    def name(self) -> Text:
-        return "action_show_courses"
-    
-    def run(
-        self,
-        dispatcher: CollectingDispatcher,
-        tracker: Tracker,
-        domain: Dict[Text, Any]
-    ) -> List[Dict[Text, Any]]:
-        
-        # Get department from slot or entity
-        department = normalize_department_name(tracker.get_slot("department"))
-        
-        if not department:
-            # Try to get from entities
-            entities = tracker.latest_message.get('entities', [])
-            for entity in entities:
-                if entity['entity'] == 'department':
-                    department = entity['value']
-                    break
-        
-        if not department:
-            dispatcher.utter_message(
-                text="Please specify a department. For example: 'CSE courses' or 'BBA courses'"
-            )
-            return []
-        
-        
-        # Find matching file
-        filename = DEPARTMENT_FILES.get(department)
-        
-        if not filename:
-            dispatcher.utter_message(
-                text=f"Sorry, I don't have information for '{department}'. "
-                     f"Try: CSE, EEE, BBA, Civil Engineering, English, Law, MBA, etc."
-            )
-            return [SlotSet("department", None)]
-        
-        # Load course data
-        data = load_json_file(filename)
-        
-        if not data:
-            dispatcher.utter_message(
-                text=f"Sorry, I couldn't load course data for {department}."
-            )
-            return [SlotSet("department", None)]
-        
-        # Extract courses
-        courses = self._extract_courses(data)
-        
-        if not courses:
-            dispatcher.utter_message(
-                text=f"No courses found for {department}."
-            )
-            return [SlotSet("department", None)]
-        
-        # Format and send response
-        response = self._format_courses_response(department, courses, data)
-        dispatcher.utter_message(text=response)
-        
-        return [SlotSet("department", department)]
-    
-    def _extract_courses(self, data: dict) -> List[dict]:
-        """Extract course list from JSON data"""
-        courses = []
-        
-        # Try different JSON structures
-        if 'courses' in data:
-            courses = data['courses']
-        elif 'course_list' in data:
-            courses = data['course_list']
-        elif 'curriculum' in data:
-            courses = data['curriculum']
-        elif isinstance(data, list):
-            courses = data
-        
-        return courses
-    
-    def _format_courses_response(self, department: str, courses: List[dict], data: dict) -> str:
-        """Format courses into readable response"""
-        
-        # Get department info (handles both structures)
-        dept_info = data.get('department_info', {})
-        
-        # Get program/department name
-        program_name = (
-            dept_info.get('program_name') or 
-            dept_info.get('department_name') or 
-            data.get('program_name') or
-            department.upper()
-        )
-        
-        # Get total credits
-        total_credits = (
-            dept_info.get('total_credits') or 
-            dept_info.get('minimum_credits_required') or
-            data.get('total_credits') or
-            'N/A'
-        )
-        
-        response = f"📚 **{program_name} Courses**\n\n"
-        response += f"**Total Credits:** {total_credits}\n\n"
-        
-        # Show course summaries if available
-        course_summaries = data.get('course_summaries', {})
-        if course_summaries:
-            response += "**Credit Distribution:**\n"
-            for category, credits in course_summaries.items():
-                # Format category name (e.g., core_credits -> Core Credits)
-                category_name = category.replace('_', ' ').title()
-                response += f"• {category_name}: {credits}\n"
-            response += "\n"
-        
-        # Group courses by category if available
-        grouped = self._group_courses_by_category(courses)
-        
-        if grouped:
-            # Show courses grouped by category
-            for category, cat_courses in list(grouped.items())[:5]:  # Show first 5 categories
-                response += f"**{category}:**\n"
-                for course in cat_courses[:8]:  # Show first 8 courses per category
-                    code = course.get('code', course.get('course_code', 'N/A'))
-                    name = course.get('name', course.get('title', 'N/A'))
-                    credits = course.get('credits', course.get('credit', 'N/A'))
-                    response += f"• {code} - {name} ({credits} cr)\n"
-                
-                # Show count if more courses exist
-                if len(cat_courses) > 8:
-                    response += f"  ... and {len(cat_courses) - 8} more\n"
-                response += "\n"
-            
-            # Total courses shown
-            total_shown = sum(min(8, len(cat_courses)) for cat_courses in list(grouped.values())[:5])
-            if len(courses) > total_shown:
-                response += f"_Total: {len(courses)} courses_\n\n"
-        else:
-            # Show flat list if no categories
-            response += "**Course List:**\n"
-            for course in courses[:15]:
-                code = course.get('code', course.get('course_code', 'N/A'))
-                name = course.get('name', course.get('title', 'N/A'))
-                credits = course.get('credits', course.get('credit', 'N/A'))
-                response += f"• {code} - {name} ({credits} cr)\n"
-            
-            if len(courses) > 15:
-                response += f"\n... and {len(courses) - 15} more courses\n\n"
-        
-        response += f"Please visit https://www.ewubd.edu or contact admissions for more information."
-        
-        return response
-    
-    def _group_courses_by_category(self, courses: List[dict]) -> Dict[str, List[dict]]:
-        """Group courses by category"""
-        grouped = {}
-        
-        for course in courses:
-            # Try multiple fields for grouping
-            category = (
-                course.get('category') or 
-                course.get('semester') or 
-                course.get('year') or 
-                course.get('level') or
-                'Other Courses'
-            )
-            
-            if category not in grouped:
-                grouped[category] = []
-            grouped[category].append(course)
-        
-        # Only return grouped if we have meaningful groups (more than 1)
-        return grouped if len(grouped) > 1 else {}
-
-
-# ============================================================================
-# ACTION: Show Course Details (by course code)
-# ============================================================================
-
-class ActionShowCourseDetails(Action):
-    """Show details of a specific course by code"""
-    
-    def name(self) -> Text:
-        return "action_show_course_details"
-    
-    def run(
-        self,
-        dispatcher: CollectingDispatcher,
-        tracker: Tracker,
-        domain: Dict[Text, Any]
-    ) -> List[Dict[Text, Any]]:
-        
-        # Get course code
-        course_code = tracker.get_slot("course_code")
-        
-        if not course_code:
-            entities = tracker.latest_message.get('entities', [])
-            for entity in entities:
-                if entity['entity'] == 'course_code':
-                    course_code = entity['value']
-                    break
-        
-        if not course_code:
-            dispatcher.utter_message(
-                text="Please provide a course code. For example: CSE101, EEE201, BBA301"
-            )
-            return []
-        
-        # Normalize course code (remove spaces, hyphens, make uppercase)
-        course_code = course_code.upper().replace(' ', '').replace('-', '')
-        
-        # Search all department files
-        course_info = self._find_course(course_code)
-        
-        if not course_info:
-            dispatcher.utter_message(
-                text=f"Sorry, I couldn't find information for course code: {course_code}"
-            )
-            return [SlotSet("course_code", None)]
-        
-        # Format response
-        response = self._format_course_details(course_code, course_info)
-        dispatcher.utter_message(text=response)
-        
-        return [SlotSet("course_code", course_code)]
-    
-    def _find_course(self, course_code: str) -> dict:
-        """Search for course across all department files"""
-        
-        # Use set to avoid duplicate files
-        for filename in set(DEPARTMENT_FILES.values()):
-            data = load_json_file(filename)
-            if not data:
-                continue
-            
-            # Get courses list
-            courses = []
-            if 'courses' in data:
-                courses = data['courses']
-            elif isinstance(data, list):
-                courses = data
-            
-            # Search for matching course
-            for course in courses:
-                # Normalize course code from JSON
-                code = course.get('code', course.get('course_code', '')).upper().replace(' ', '').replace('-', '')
-                if code == course_code:
-                    return course
-        
+    def _route(self, text: str):
+        text_lower = text.lower()
+        for action_cls, keywords in self._router:
+            for kw in keywords:
+                if kw.lower() in text_lower:
+                    return action_cls
         return None
-    
-    def _format_course_details(self, course_code: str, course: dict) -> str:
-        """Format course details"""
-        
-        # Extract course information (handle multiple field names)
-        code = course.get('code', course.get('course_code', course_code))
-        name = course.get('name', course.get('title', 'N/A'))
-        credits = course.get('credits', course.get('credit', 'N/A'))
-        prerequisites = course.get('prerequisites', course.get('prerequisite', 'None'))
-        category = course.get('category', 'N/A')
-        description = course.get('description', 'No description available')
-        
-        response = f"**Course Details**\n\n"
-        response += f"**Code:** {code}\n"
-        response += f"**Name:** {name}\n"
-        response += f"**Credits:** {credits}\n"
-        response += f"**Prerequisites:** {prerequisites}\n"
-        response += f"**Category:** {category}\n\n"
-        
-        # Only show description if available
-        if description and description != 'No description available':
-            response += f"**Description:**\n{description}\n\n"
-        
-        response += f"Please visit https://www.ewubd.edu or contact admissions for more information."
-        
-        return response
 
+    def run(self, dispatcher, tracker, domain):
+        user_message = tracker.latest_message.get("text", "").strip()
+        lang = detect_language(user_message) if user_message else "english"
+        logger.info(f"[action_default_fallback] lang={lang}  query={user_message!r}")
 
-# ============================================================================
-# ACTION: Show Total Credits
-# ============================================================================
-
-class ActionShowCredits(Action):
-    """Show total credits for a program"""
-    
-    def name(self) -> Text:
-        return "action_show_credits"
-    
-    def run(
-        self,
-        dispatcher: CollectingDispatcher,
-        tracker: Tracker,
-        domain: Dict[Text, Any]
-    ) -> List[Dict[Text, Any]]:
-        
-        department = normalize_department_name(tracker.get_slot("department"))
-        
-        if not department:
-            entities = tracker.latest_message.get('entities', [])
-            for entity in entities:
-                if entity['entity'] == 'department':
-                    department = entity['value']
-                    break
-        
-        if not department:
-            dispatcher.utter_message(text="Which program? (e.g., CSE, BBA, MBA, Civil Engineering)")
+        if not user_message:
+            dispatcher.utter_message(text=_lang_wrap("I didn't catch that. Could you rephrase?", lang))
             return []
-        
-     
-        filename = DEPARTMENT_FILES.get(department)
-        
-        if not filename:
-            dispatcher.utter_message(text=f"Sorry, I don't have info for {department}")
-            return []
-        
-        data = load_json_file(filename)
-        
-        if not data:
-            dispatcher.utter_message(text=f"Couldn't load data for {department}")
-            return []
-        
-        # Get department info (handles both JSON structures)
-        dept_info = data.get('department_info', {})
-        
-        # Get program/department name
-        program_name = (
-            dept_info.get('program_name') or 
-            dept_info.get('department_name') or 
-            data.get('program_name') or
-            department.upper()
-        )
-        
-        # Get total credits
-        total_credits = (
-            dept_info.get('total_credits') or 
-            dept_info.get('minimum_credits_required') or
-            data.get('total_credits') or
-            'N/A'
-        )
-        
-        response = f"**{program_name} Credit Requirements**\n\n"
-        response += f"**Total Credits:** {total_credits}\n\n"
-        
-        # Get breakdown from course_summaries or credit_breakdown
-        breakdown = data.get('course_summaries', data.get('credit_breakdown', {}))
-        
-        if breakdown:
-            response += "**Credit Breakdown:**\n"
-            for category, credits in breakdown.items():
-                # Format category name nicely
-                category_name = category.replace('_', ' ').title()
-                response += f"• {category_name}: {credits}\n"
-        
-        response += f"\n Please visit https://www.ewubd.edu or contact admissions for more information."
-        
-        dispatcher.utter_message(text=response)
-        
-        return [SlotSet("department", department)]
-        
-        # Extract courses
-        courses = self._extract_courses(data)
-        
-        if not courses:
-            dispatcher.utter_message(
-                text=f"No courses found for {department}."
-            )
-            return [SlotSet("department", None)]
-        
-        # Format and send response
-        response = self._format_courses_response(department, courses, data)
-        dispatcher.utter_message(text=response)
-        
-        return [SlotSet("department", department)]
-    
-    def _extract_courses(self, data: dict) -> List[dict]:
-        """Extract course list from JSON data"""
-        courses = []
-        
-        # Try different JSON structures
-        if 'courses' in data:
-            courses = data['courses']
-        elif 'course_list' in data:
-            courses = data['course_list']
-        elif 'curriculum' in data:
-            courses = data['curriculum']
-        elif isinstance(data, list):
-            courses = data
-        
-        return courses
-    
-    def _format_courses_response(self, department: str, courses: List[dict], data: dict) -> str:
-        """Format courses into readable response"""
-        
-        # Get department info (handles both structures)
-        dept_info = data.get('department_info', {})
-        
-        # Get program/department name
-        program_name = (
-            dept_info.get('program_name') or 
-            dept_info.get('department_name') or 
-            data.get('program_name') or
-            department.upper()
-        )
-        
-        # Get total credits
-        total_credits = (
-            dept_info.get('total_credits') or 
-            dept_info.get('minimum_credits_required') or
-            data.get('total_credits') or
-            'N/A'
-        )
-        
-        response = f"📚 **{program_name} Courses**\n\n"
-        response += f"**Total Credits:** {total_credits}\n\n"
-        
-        # Show course summaries if available
-        course_summaries = data.get('course_summaries', {})
-        if course_summaries:
-            response += "**Credit Distribution:**\n"
-            for category, credits in course_summaries.items():
-                # Format category name (e.g., core_credits -> Core Credits)
-                category_name = category.replace('_', ' ').title()
-                response += f"• {category_name}: {credits}\n"
-            response += "\n"
-        
-        # Group courses by category if available
-        grouped = self._group_courses_by_category(courses)
-        
-        if grouped:
-            # Show courses grouped by category
-            for category, cat_courses in list(grouped.items())[:5]:  # Show first 5 categories
-                response += f"**{category}:**\n"
-                for course in cat_courses[:8]:  # Show first 8 courses per category
-                    code = course.get('code', course.get('course_code', 'N/A'))
-                    name = course.get('name', course.get('title', 'N/A'))
-                    credits = course.get('credits', course.get('credit', 'N/A'))
-                    response += f"• {code} - {name} ({credits} cr)\n"
-                
-                # Show count if more courses exist
-                if len(cat_courses) > 8:
-                    response += f"  ... and {len(cat_courses) - 8} more\n"
-                response += "\n"
-            
-            # Total courses shown
-            total_shown = sum(min(8, len(cat_courses)) for cat_courses in list(grouped.values())[:5])
-            if len(courses) > total_shown:
-                response += f"_Total: {len(courses)} courses_\n\n"
-        else:
-            # Show flat list if no categories
-            response += "**Course List:**\n"
-            for course in courses[:15]:
-                code = course.get('code', course.get('course_code', 'N/A'))
-                name = course.get('name', course.get('title', 'N/A'))
-                credits = course.get('credits', course.get('credit', 'N/A'))
-                response += f"• {code} - {name} ({credits} cr)\n"
-            
-            if len(courses) > 15:
-                response += f"\n... and {len(courses) - 15} more courses\n\n"
-        
-        response += f" Please visit https://www.ewubd.edu or contact admissions for more information."
-        
-        return response
-    
-    def _group_courses_by_category(self, courses: List[dict]) -> Dict[str, List[dict]]:
-        """Group courses by category"""
-        grouped = {}
-        
-        for course in courses:
-            # Try multiple fields for grouping
-            category = (
-                course.get('category') or 
-                course.get('semester') or 
-                course.get('year') or 
-                course.get('level') or
-                'Other Courses'
-            )
-            
-            if category not in grouped:
-                grouped[category] = []
-            grouped[category].append(course)
-        
-        # Only return grouped if we have meaningful groups (more than 1)
-        return grouped if len(grouped) > 1 else {}
 
+        matched_cls = self._route(user_message)
+        if matched_cls is not None:
+            logger.info(f"[action_default_fallback] keyword-routed to {matched_cls.__name__}")
+            return matched_cls().run(dispatcher, tracker, domain)
 
-#
+        dispatcher.utter_message(text=_CONTACT_MSG[lang])
+        return []
