@@ -23,7 +23,7 @@ def embed_query(text: str) -> list:
 
 
 API_BASE_URL = "https://ewu-server.onrender.com/api"
-API_KEY      = ""
+API_KEY      = "i6EDytaX4E2jI6GvZQc0b1RSZHTI5_wVRa2rfL7rLpk"
 HEADERS      = {"x-api-key": API_KEY}
 
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com/Atkiya/jsonfiles/main"
@@ -54,9 +54,9 @@ GITHUB_DATA_SOURCES = {
     "helpdesk_contacts": "static_helpdesk.json"
 }
 
-# ─────────────────────────────────────────────
+
 # LANGUAGE HELPERS
-# ─────────────────────────────────────────────
+
 
 _BANGLA_UNICODE_MIN = 0x0980
 _BANGLA_UNICODE_MAX = 0x09FF
@@ -438,9 +438,9 @@ def utter_smart(dispatcher: CollectingDispatcher, tracker: Tracker, text: str) -
     dispatcher.utter_message(text=_lang_wrap(text, lang))
 
 
-# ─────────────────────────────────────────────
+
 # STARTUP DATA LOAD
-# ─────────────────────────────────────────────
+
 
 try:
     print("\n" + "=" * 60)
@@ -489,9 +489,9 @@ except Exception as e:
     DATA = {}
 
 
-# ─────────────────────────────────────────────
+
 # HELPERS
-# ─────────────────────────────────────────────
+
 
 
  
@@ -537,7 +537,7 @@ def get_course_by_code(course_code: str) -> Dict[str, Any]:
     """
     course_code = course_code.upper().strip()
  
-    # ── Undergraduate ─────────────────────────────────────────────────────────
+    #  Undergraduate
     for data_key in DEPARTMENT_MAPPING.values():
         program_data = DATA.get(data_key)
         if not program_data or not isinstance(program_data, dict):
@@ -564,8 +564,8 @@ def get_course_by_code(course_code: str) -> Dict[str, Any]:
         # Major-specific lists — check both field name variants
         for major_name, major_data in program_data.get("majors", {}).items():
             core_courses = (
-                major_data.get("required_courses", [])    # BBA
-                + major_data.get("compulsory_courses", []) # other UG files
+                major_data.get("required_courses", [])    
+                + major_data.get("compulsory_courses", [])
             )
             for course in core_courses:
                 if course.get("code", "").upper() == course_code:
@@ -594,7 +594,7 @@ def get_course_by_code(course_code: str) -> Dict[str, Any]:
                         "category":      f"Elective - {major_name}",
                     }
  
-    # ── Graduate ──────────────────────────────────────────────────────────────
+    #  Graduate
     for data_key in GRADUATE_MAPPING.values():
         program_data = DATA.get(data_key)
         if not program_data or not isinstance(program_data, dict):
@@ -620,9 +620,9 @@ def get_course_by_code(course_code: str) -> Dict[str, Any]:
 
 
 
-# ─────────────────────────────────────────────
+
 # ACTION CLASSES
-# ─────────────────────────────────────────────
+
 
 class ActionGetLocation(Action):
     def name(self): return "action_get_location"
@@ -813,8 +813,8 @@ GITHUB_COURSE_PROGRAM_MAP = {
     "emba":                   "mba_emba",
     "executive mba":          "mba_emba",
     "ma english":             "ma_english",
-    "tesol":                  "tesol",          # ← CHANGE (was "ma_english")
-    "teaching english":       "tesol",          # ← ADD
+    "tesol":                  "tesol",          
+    "teaching english":       "tesol",          
     "ma tesol":               "tesol",
     "ma in english":          "ma_english",
     "tesol":                  "ma_english",
@@ -845,9 +845,9 @@ for _key in _github_course_files:
 
 
 
-# ─────────────────────────────────────────────
+
 # GITHUB COURSE HELPERS
-# ─────────────────────────────────────────────
+
 
 def _normalize_course_list(raw: List) -> List[Dict]:
     """Normalize varied field names into a consistent course dict."""
@@ -859,7 +859,7 @@ def _normalize_course_list(raw: List) -> List[Dict]:
         title   = (c.get("course_title") or c.get("title") or c.get("name") or "").strip()
         credits = c.get("credits") or c.get("credit") or c.get("credit_hours") or "?"
 
-        # Handle "CSE503 Data Structures" packed into a single "course" string
+       
         if not title and code and not code[:3].isdigit():
             parts = code.split(" ", 2)
             if len(parts) >= 2 and parts[0][-1].isdigit():
@@ -876,29 +876,21 @@ def _normalize_course_list(raw: List) -> List[Dict]:
 
 
 def _extract_courses_from_github(data: Any, program_label: str = "") -> List[Dict]:
-    """
-    Accepts any common JSON shape and returns a flat normalized course list.
-    Handles:
-      - top-level list
-      - {"courses": [...]}
-      - {"core_courses": [...], "elective_courses": [...], ...}
-      - one level deeper: {"track": {"courses": [...]}}
-    """
     if not data:
         return []
 
-    # Shape 1: bare list
+ 
     if isinstance(data, list):
         return _normalize_course_list(data)
 
     if not isinstance(data, dict):
         return []
 
-    # Shape 2: {"courses": [...]}
+
     if "courses" in data and isinstance(data["courses"], list):
         return _normalize_course_list(data["courses"])
 
-    # Shape 3: multiple section keys at top level
+   
     collected = []
     for val in data.values():
         if isinstance(val, list):
@@ -911,8 +903,6 @@ def _extract_courses_from_github(data: Any, program_label: str = "") -> List[Dic
                 for v2 in val.values():
                     if isinstance(v2, list):
                         collected.extend(_normalize_course_list(v2))
-
-    # Deduplicate by course_code
     seen = set()
     unique = []
     for c in collected:
@@ -922,6 +912,9 @@ def _extract_courses_from_github(data: Any, program_label: str = "") -> List[Dic
             unique.append(c)
     return unique
 
+
+
+
 class ActionGetCourses(Action):
     def name(self): return "action_get_courses"
  
@@ -930,7 +923,7 @@ class ActionGetCourses(Action):
         user_message = tracker.latest_message.get("text", "")
         user_lower  = user_message.lower()
  
-        # ── 1. Specific course-code lookup ────────────────────────────────────
+        #  1. Specific course-code lookup 
         matches = re.findall(r'\b([A-Z]{2,4}\s*\d{3,4})\b', user_message.upper())
         if matches:
             result = get_course_by_code(matches[0].replace(" ", ""))
@@ -949,8 +942,6 @@ class ActionGetCourses(Action):
             dispatcher.utter_message(text=_lang_wrap(msg, lang))
             return []
  
-        # ── 2. Graduate program check — MUST run before UG keyword check ──────
-        #    Longest phrases first prevents "mba" matching inside "emba", etc.
         gh_key = None
         for phrase in sorted(GITHUB_COURSE_PROGRAM_MAP, key=len, reverse=True):
             if phrase in user_lower:
@@ -981,7 +972,7 @@ class ActionGetCourses(Action):
                 dispatcher.utter_message(text=_lang_wrap(msg, lang))
             return []
  
-        # ── 3. Undergraduate department keyword ───────────────────────────────
+        
         department = None
         for dept_alias in DEPARTMENT_MAPPING:
             if dept_alias in user_lower:
@@ -993,7 +984,7 @@ class ActionGetCourses(Action):
             if slot_val and slot_val.lower() in DEPARTMENT_MAPPING:
                 department = slot_val.lower()
  
-        # ── 4. No department — show all-program overview ──────────────────────
+       
         if not department:
             msg       = " All Available Courses:\n\n"
             total_shown = 0
@@ -1029,7 +1020,7 @@ class ActionGetCourses(Action):
             dispatcher.utter_message(text=_lang_wrap(msg, lang))
             return []
  
-        # ── 5. Show courses for the detected UG department ────────────────────
+        #  5. Show courses for the detected UG department 
         dept_key     = DEPARTMENT_MAPPING[department]
         program_data = DATA.get(dept_key, {})
  
@@ -1041,7 +1032,7 @@ class ActionGetCourses(Action):
  
         courses = program_data.get("courses", [])
  
-        # Count major courses — handle both required_courses (BBA) and compulsory_courses
+     
         major_courses = 0
         for major_data in program_data.get("majors", {}).values():
             major_courses += len(major_data.get("required_courses", []))
@@ -1127,7 +1118,7 @@ class ActionGetPrograms(Action):
         icons = {"Undergraduate": "", "Postgraduate": "", "Graduate": ""}
         message = " East West University Programs:\n\n"
         for dtype, names in grouped.items():
-            message += f"{icons.get(dtype,'📖')} {dtype}:\n"
+            message += f"{icons.get(dtype,'#')} {dtype}:\n"
             message += "".join(f"   • {n}\n" for n in names) + "\n"
 
         dispatcher.utter_message(text=_lang_wrap(message.strip(), lang))
@@ -1160,7 +1151,7 @@ class ActionGetGradingSystem(Action):
             for g in special:
                 message += f"  {g.get('letter_grade','')}: {g.get('description','')}\n"
                 if g.get("note"):
-                    message += f"    ℹ️ {g.get('note')}\n"
+                    message += f"    * {g.get('note')}\n"
 
         dispatcher.utter_message(text=_lang_wrap(message, lang))
         return []
@@ -1198,7 +1189,7 @@ class ActionGetTuitionFees(Action):
             row += f"     Tuition Fees           : {_fmt(p.get('total_tuition'))} {currency}\n"
             row += f"     Library/Lab/Activities : {_fmt(p.get('library_lab_fees'))} {currency}\n"
             row += f"     Admission Fee          : {_fmt(p.get('admission_fee'))} {currency}\n"
-            row += f"     ──────────────────────────────────\n"
+            row += f"     \n"
             row += f"      GRAND TOTAL         : {_fmt(p.get('grand_total'))} {currency}\n"
             return row
 
@@ -1235,7 +1226,7 @@ class ActionGetScholarships(Action):
 
         msg = "EWU Scholarships & Financial Assistance\n\n"
 
-        # ── Merit Scholarships ────────────────────────────────────────────────
+        #  Merit Scholarships 
         merit = raw.get("merit_scholarships", {})
         if merit:
             msg += " Merit Scholarships:\n"
@@ -1250,7 +1241,7 @@ class ActionGetScholarships(Action):
                         msg += f"    {field.replace('_',' ').title()}: {val}\n"
             msg += "\n"
 
-        # ── Financial Assistance ──────────────────────────────────────────────
+        #  Financial Assistance 
         fa = raw.get("financial_assistance", {})
         if fa:
             msg += "Financial Assistance:\n"
@@ -1265,7 +1256,7 @@ class ActionGetScholarships(Action):
                         msg += f"    {field.replace('_',' ').title()}: {val}\n"
             msg += "\n"
 
-        # ── Graduate Scholarship Slabs ────────────────────────────────────────
+        #  Graduate Scholarship Slabs 
         grad_req = raw.get("graduate_scholarship_requirements", {})
         slabs = grad_req.get("scholarships", [])
         if slabs:
@@ -1274,7 +1265,7 @@ class ActionGetScholarships(Action):
                 msg += f"  • CGPA {s.get('bachelor_cgpa','N/A')}: {s.get('scholarship_percentage','N/A')} tuition waiver\n"
             msg += "\n"
 
-        # ── Scholarship Types ─────────────────────────────────────────────────
+        #  Scholarship Types 
         types = raw.get("scholarship_types", [])
         if types:
             msg += "Scholarship Types:\n"
@@ -1282,7 +1273,7 @@ class ActionGetScholarships(Action):
                 msg += f"  • {t}\n"
             msg += "\n"
 
-        # ── Overview numbers ──────────────────────────────────────────────────
+        #  Overview numbers 
         overview = raw.get("overview", {})
         if overview:
             msg += (
@@ -1297,36 +1288,10 @@ class ActionGetScholarships(Action):
         return []
 
 class ActionGetHelpdeskContacts(Action):
-    """
-    Loads helpdesk contact data from the GitHub-backed helpdesk_contacts.json,
-    which has the structure:
-    {
-      "institution": { ... },
-      "department_helpdesks": {
-        "academic_departments": {
-          "<key>": { "department": "CE", "full_name": "...", "email": "..." },
-          ...
-        },
-        "administrative_offices": {
-          "<key>": { "office": "Registrar", "email": "...", "purpose": "..." },
-          ...
-        }
-      },
-      "contact_guidelines": { ... }
-    }
-
-    Bug fix: department codes like "CE" were previously matched using a plain
-    substring check, so "ce" would hit inside words like "office", "science",
-    "register". All code matching now uses regex word boundaries (\\b) to
-    ensure only standalone tokens qualify.
-    """
-
     def name(self): return "action_get_helpdesk_contacts"
 
     _GITHUB_FILE = "helpdesk_contacts.json"
 
-    # Extra aliases for admin offices whose common name differs from the key.
-    # Maps lowercase alias -> lowercase office key in the JSON.
     _ADMIN_ALIASES = {
         "register":    "registrar",
         "registrar":   "registrar",
@@ -1341,7 +1306,7 @@ class ActionGetHelpdeskContacts(Action):
         "grade report":"coe",
     }
 
-    # ── internal helpers ──────────────────────────────────────────────────────
+    #  internal helpers 
 
     def _load_raw(self) -> dict:
         """Return the helpdesk JSON dict, preferring preloaded DATA."""
@@ -1382,25 +1347,12 @@ class ActionGetHelpdeskContacts(Action):
                 "full_name": val.get("office", key).strip(),
                 "email":     val.get("email", "").strip(),
                 "purpose":   val.get("purpose", "").strip(),
-                "_key":      key.lower(),   # original JSON key for alias lookup
+                "_key":      key.lower(),   
             })
 
         return entries
 
     def _find_match(self, user_message: str, entries: list):
-        """
-        Return the first entry that matches the user message, or None.
-
-        Matching strategy (in priority order):
-          1. Full-name substring match (safe — names are long enough).
-          2. Whole-word code match via \\b regex  ← fixes the CE/office bug.
-          3. Admin alias lookup for common spelling variants
-             (e.g. "register" -> Registrar).
-
-        A plain `code in user_message` check is deliberately NOT used because
-        short codes such as "CE", "ICS", "COE" are common substrings of
-        ordinary English words ("office", "voice", "science", etc.).
-        """
         import re
 
         msg = user_message.lower()
@@ -1408,16 +1360,16 @@ class ActionGetHelpdeskContacts(Action):
         for entry in entries:
             full_name_lower = entry["full_name"].lower()
 
-            # 1. Full-name match (length makes false positives very unlikely)
+          
             if full_name_lower and full_name_lower in msg:
                 return entry
 
-            # 2. Whole-word code match
+       
             code_lower = entry["code"].lower()
             if code_lower and re.search(r"\b" + re.escape(code_lower) + r"\b", msg):
                 return entry
 
-        # 3. Admin alias lookup
+     
         for alias, target_key in self._ADMIN_ALIASES.items():
             if alias in msg:
                 for entry in entries:
@@ -1426,7 +1378,7 @@ class ActionGetHelpdeskContacts(Action):
 
         return None
 
-    # ── main run ──────────────────────────────────────────────────────────────
+
 
     def run(self, dispatcher, tracker, domain):
         lang         = get_user_language(tracker)
@@ -1443,7 +1395,7 @@ class ActionGetHelpdeskContacts(Action):
             dispatcher.utter_message(text=_NO_INFO_MSG[lang])
             return []
 
-        # -- specific department/office match --
+       
         matched = self._find_match(user_message, entries)
         if matched:
             msg  = f"EWU Helpdesk - {matched['full_name']}\n\n"
@@ -1454,7 +1406,7 @@ class ActionGetHelpdeskContacts(Action):
             dispatcher.utter_message(text=_lang_wrap(msg, lang))
             return []
 
-        # -- no specific match: show all contacts --
+     
         academic = [e for e in entries if e["category"] == "academic"]
         admin    = [e for e in entries if e["category"] == "administrative"]
 
@@ -1476,6 +1428,9 @@ class ActionGetHelpdeskContacts(Action):
         )
         dispatcher.utter_message(text=_lang_wrap(msg, lang))
         return []
+
+
+
 
 class ActionGetAdmissionDeadlines(Action):
     def name(self): return "action_get_admission_deadlines"
@@ -1589,7 +1544,7 @@ class ActionGetAdmissionRequirements(Action):
                 dept_key = key
                 break
 
-        # ── graduate ──────────────────────────────────────────────────────────
+        #  graduate
         if wants_graduate:
             grad = reqs.get("graduate", {}).get("mba_emba", {})
             message += " Graduate (Masters / MS / MBA) Requirements:\n"
@@ -1601,7 +1556,7 @@ class ActionGetAdmissionRequirements(Action):
             utter_smart(dispatcher, tracker, text=message)
             return []
 
-        # ── undergraduate – specific department ───────────────────────────────
+        #  undergraduate 
         ug = reqs.get("undergraduate", {}).get("general_programs_except_bpharm", {})
         if dept_key and "subject_requirements" in ug:
             subject_req = ug["subject_requirements"].get(dept_key)
@@ -1613,7 +1568,7 @@ class ActionGetAdmissionRequirements(Action):
                 utter_smart(dispatcher, tracker, text=message)
                 return []
 
-        # ── show all ──────────────────────────────────────────────────────────
+        #  show all
         message += " Undergraduate (General):\n"
         message += f"  SSC & HSC: {ug.get('ssc_hsc')}\n"
         message += f"  Diploma: {ug.get('diploma')}\n"
@@ -1644,7 +1599,7 @@ class ActionGetConductRules(Action):
             return []
 
         r   = doc.get("content", {})
-        msg = " EWU General Conduct Rules\n\n✅ Expected Behavior:\n"
+        msg = " EWU General Conduct Rules\n\n Expected Behavior:\n"
         for rule in r.get("general_conduct_rules", {}).get("expected_behavior", []):
             msg += f"  • {rule}\n"
         msg += "\n Academic Misconduct (Zero Tolerance):\n"
@@ -1786,13 +1741,13 @@ class ActionGetGovernance(Action):
             dispatcher.utter_message(text=_NO_INFO_MSG[lang])
             return []
 
-        # filter in-memory instead of passing params to the API
+        
         members = (
             [m for m in all_members if m.get("body") == body_filter]
             if body_filter else all_members
         )
         if not members:
-            members = all_members  # fallback to all if filter yields nothing
+            members = all_members  
 
         grouped: Dict[str, List] = {}
         for m in members:
@@ -1907,15 +1862,12 @@ class ActionGetAcademicCalendar(Action):
         wants_exam = "exam" in user_message
         calendar_type = "exam_schedule" if wants_exam else "academic_calendar"
 
-        # Filter preloaded data by calendar_type when the field is present;
-        # otherwise use the full list (the API may not distinguish them).
+       
         all_calendar = DATA.get("academic_calendar") or []
         if isinstance(all_calendar, list) and all_calendar:
-            # Try to filter; fall back to full list if no entries match
             filtered = [e for e in all_calendar if e.get("calendar_type") == calendar_type]
             calendar = filtered if filtered else all_calendar
         else:
-            # Live fallback with params
             calendar = fetch_api_data(
                 "academic-calendar", params={"calendar_type": calendar_type}
             )
@@ -1943,12 +1895,6 @@ class ActionGetAcademicCalendar(Action):
 
 
 class ActionAdmissionApplicationStep(Action):
-    """
-    Walks the user through EWU's official Online Admission Form guidelines.
-    Uses preloaded/GitHub-backed admission_process data when available and
-    falls back to official hardcoded steps otherwise.
-    """
-
     def name(self): return "action_admission_application_steps"
 
     def run(self, dispatcher, tracker, domain):
@@ -2189,14 +2135,9 @@ class ActionAdmissionApplicationStep(Action):
 
 
 class ActionGetProgramDetails(Action):
-    """
-    Loads program credit totals from static_Programs.json on GitHub and
-    displays: Program Name → Total Credits, grouped by level.
-    """
-
     def name(self): return "action_get_program_details"
 
-    # Maps top-level JSON keys → display label + emoji
+   
     _SECTIONS = [
         ("undergraduate_programs", " Undergraduate Programs", "UG"),
         ("graduate_programs",      " Graduate Programs",      "Graduate"),
@@ -2207,7 +2148,7 @@ class ActionGetProgramDetails(Action):
         lang = get_user_language(tracker)
         logger.info(f"[action_get_program_details] lang={lang}")
 
-        # ── Load from preloaded GitHub data; live fetch as fallback ──────────
+        
         raw = DATA.get("static_programs") or load_from_github(
             GITHUB_DATA_SOURCES["static_programs"]
         )
@@ -2222,7 +2163,7 @@ class ActionGetProgramDetails(Action):
             )
             return []
 
-        # ── Optional level filter from user message ───────────────────────────
+     
         user_msg   = tracker.latest_message.get("text", "").lower()
         wants_grad = any(kw in user_msg for kw in [
             "graduate", "masters", "master", "mba", "ms", "postgraduate",
@@ -2236,7 +2177,7 @@ class ActionGetProgramDetails(Action):
         has_content = False
 
         for json_key, section_label, level_tag in self._SECTIONS:
-            # Apply level filter
+           
             if wants_grad  and level_tag not in ("Graduate",):
                 continue
             if wants_ug    and level_tag != "UG":
@@ -2252,7 +2193,7 @@ class ActionGetProgramDetails(Action):
             for prog_name, prog_info in section_data.items():
                 if not isinstance(prog_info, dict):
                     continue
-                # total_credits or total_credit_hours
+                
                 credits = (
                     prog_info.get("total_credits")
                     or prog_info.get("total_credit_hours")
@@ -2276,20 +2217,6 @@ class ActionGetProgramDetails(Action):
 
 
 class ActionGetFacilities(Action):
-    """
-    Parses the nested EWU facilities JSON structure:
-    {
-      "university": "...",
-      "facilities": {
-        "campus_life":          { "available": [...], "not_available": [...] },
-        "ics_services":         { "description": "...", "services": [...] },
-        "research_center":      { "name": "...", "facilities": [...] },
-        "engineering_labs":     { "departments": [...], "labs": [...] },
-        "pharmacy_labs":        { "description": "...", "major_equipment": [...], ... },
-        "civil_engineering_labs": { "labs": [...] }
-      }
-    }
-    """
 
     def name(self): return "action_get_facilities"
 
@@ -2297,7 +2224,7 @@ class ActionGetFacilities(Action):
         lang = get_user_language(tracker)
         logger.info(f"[action_get_facilities] lang={lang}")
 
-        # -- load data (prefer preloaded, fallback to GitHub) --
+        
         raw = DATA.get("facilities") or load_from_github("dynamic_facilites.json")
         if not raw or not isinstance(raw, dict):
             dispatcher.utter_message(
@@ -2309,7 +2236,7 @@ class ActionGetFacilities(Action):
             )
             return []
 
-        # -- unwrap top-level structure --
+    
         facilities_root = raw.get("facilities", raw)
         if not isinstance(facilities_root, dict):
             dispatcher.utter_message(text=_NO_INFO_MSG[lang])
@@ -2318,7 +2245,7 @@ class ActionGetFacilities(Action):
         msg = "EWU Campus Facilities:\n\n"
         has_content = False
 
-        # -- 1. Campus Life --
+    
         campus_life = facilities_root.get("campus_life", {})
         if isinstance(campus_life, dict):
             available     = campus_life.get("available", [])
@@ -2345,7 +2272,7 @@ class ActionGetFacilities(Action):
                         msg += f"   - {item.get('name', 'N/A')}: {item.get('description', '')}\n"
                 msg += "\n"
 
-        # -- 2. ICS Services --
+
         ics = facilities_root.get("ics_services", {})
         if isinstance(ics, dict):
             services = ics.get("services", [])
@@ -2356,7 +2283,7 @@ class ActionGetFacilities(Action):
                     msg += f"   - {svc}\n"
                 msg += "\n"
 
-        # -- 3. Research Center --
+  
         rc = facilities_root.get("research_center", {})
         if isinstance(rc, dict):
             rc_facilities = rc.get("facilities", [])
@@ -2374,7 +2301,7 @@ class ActionGetFacilities(Action):
                         msg += f"     Location: {fac['location']}\n"
                 msg += "\n"
 
-        # -- 4. Engineering Labs --
+ 
         eng = facilities_root.get("engineering_labs", {})
         if isinstance(eng, dict):
             labs  = eng.get("labs", [])
@@ -2393,7 +2320,7 @@ class ActionGetFacilities(Action):
                                 msg += f"     {lab['description'][:120]}\n"
                 msg += "\n"
 
-        # -- 5. Pharmacy Labs --
+  
         pharm = facilities_root.get("pharmacy_labs", {})
         if isinstance(pharm, dict):
             if pharm.get("description") or pharm.get("major_equipment"):
@@ -2409,7 +2336,7 @@ class ActionGetFacilities(Action):
                         msg += "\n"
                 msg += "\n"
 
-        # -- 6. Civil Engineering Labs --
+    
         civil = facilities_root.get("civil_engineering_labs", {})
         if isinstance(civil, dict):
             labs = civil.get("labs", [])
@@ -2438,14 +2365,6 @@ class ActionGetFacilities(Action):
         return []
 
 class ActionGetEventDetails(Action):
-    """
-    Keyword-filtered event lookup (distinct from the existing ActionGetEvents
-    which returns a fixed top-10 list).  This action:
-      - lets the user ask for a specific event type (seminar, workshop, fest …)
-      - returns all matching events, not just the first 10
-      - falls back to the full list if no keyword matches
-    """
-
     def name(self): return "action_get_event_details"
 
     _EVENT_TYPE_KEYWORDS = {
@@ -2474,7 +2393,7 @@ class ActionGetEventDetails(Action):
             dispatcher.utter_message(text=_NO_INFO_MSG[lang])
             return []
 
-        # ── optional type filter ──────────────────────────────────────────────
+        #  optional type filter 
         event_type = self._detect_type(user_message)
         if event_type:
             filtered = [
@@ -2515,15 +2434,11 @@ class ActionGetEventDetails(Action):
         dispatcher.utter_message(text=_lang_wrap(msg.strip(), lang))
         return []
 
-# ─────────────────────────────────────────────
+
 # KEYWORD ROUTER + DEFAULT FALLBACK
-# ─────────────────────────────────────────────
+
 
 def _build_router():
-    """
-    Returns a list of (ActionClass, frozenset[str]) pairs, checked top-to-bottom.
-    Most-specific patterns must come first.
-    """
     return [
         (ActionGetLocation, frozenset([
             "কোথায়","অবস্থিত","ঠিকানা","কোথা","অবস্থান",
