@@ -1,7 +1,7 @@
 rules:
-  # ========================================
+ 
   # BASIC CONVERSATION RULES
-  # ========================================
+ 
   
   - rule: Respond to greetings
     steps:
@@ -38,9 +38,9 @@ rules:
       - intent: bot_challenge
       - action: utter_iamabot
 
-  # ========================================
+ 
   # UNIVERSITY INFORMATION RULES
-  # ========================================
+ 
   
   - rule: Provide university location
     steps:
@@ -72,9 +72,9 @@ rules:
       - intent: ewu_mission
       - action: action_get_ewu_mission
 
-  # ========================================
+ 
   # ACADEMIC INFORMATION RULES
-  # ========================================
+ 
   
   - rule: Show courses for a department
     steps:
@@ -97,9 +97,9 @@ rules:
       - intent: grading
       - action: action_get_grading_system
 
-  # ========================================
+ 
   # ADMINISTRATION RULES
-  # ========================================
+ 
   
 
   - rule: Provide tuition fee information
@@ -117,9 +117,9 @@ rules:
       - intent: ask_helpdesk_contact
       - action: action_get_helpdesk_contacts
 
-  # ========================================
+ 
   # ADMISSIONS RULES
-  # ========================================
+ 
   
   - rule: Provide admission deadlines
     steps:
@@ -137,9 +137,9 @@ rules:
     - intent: admission_overview
     - action: action_admission_application_steps
 
-  # ========================================
+ 
   # CAMPUS LIFE RULES
-  # ========================================
+ 
 
 
   - rule: Provide conduct rules information
@@ -152,9 +152,9 @@ rules:
       - intent: clubs_societies
       - action: action_get_clubs_societies
 
-  # ========================================
+ 
   # CAREER & ALUMNI RULES
-  # ========================================
+ 
   
   - rule: Provide alumni information
     steps:
@@ -162,9 +162,9 @@ rules:
       - action: action_get_alumni_info
 
 
-  # ========================================
+ 
   # FALLBACK & ERROR HANDLING
-  # ========================================
+ 
   
   - rule: Trigger RAG for NLU fallback
     steps:
