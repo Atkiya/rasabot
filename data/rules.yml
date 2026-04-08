@@ -1,6 +1,6 @@
 rules:
  
-  # BASIC CONVERSATION RULES
+  #BASIC CONVERSATION RULES
  
   
   - rule: Respond to greetings
