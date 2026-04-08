@@ -15,10 +15,6 @@ _embedder = SentenceTransformer("intfloat/multilingual-e5-small")
 
 
 def embed_query(text: str) -> list:
-    """
-    Encodes the query with multilingual-e5-small.
-    Works natively for Bangla/Banglish — no translation required.
-    """
     return _embedder.encode(f"query: {text}", normalize_embeddings=True).tolist()
 
 
